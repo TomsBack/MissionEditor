@@ -7,6 +7,7 @@ import {
   TP_MODE_LABELS,
 } from "../utils/rewards";
 import { ALL_ITEMS } from "../utils/registry";
+import { translate } from "../utils/translations";
 import { Autocomplete } from "./Autocomplete";
 import { RewardPresetDialog } from "./TemplateDialog";
 
@@ -14,9 +15,10 @@ interface RewardEditorProps {
   rewards: string[];
   onChange: (rewards: string[]) => void;
   missionId: number;
+  translated?: boolean;
 }
 
-export function RewardEditor({ rewards, onChange, missionId }: RewardEditorProps) {
+export function RewardEditor({ rewards, onChange, missionId, translated }: RewardEditorProps) {
   const [showPresets, setShowPresets] = useState(false);
 
   function updateReward(index: number, raw: string) {
@@ -49,6 +51,7 @@ export function RewardEditor({ rewards, onChange, missionId }: RewardEditorProps
             key={i}
             index={i}
             raw={raw}
+            translated={translated}
             onChange={(updated) => updateReward(i, updated)}
             onRemove={() => removeReward(i)}
             canRemove={rewards.length > 1}
@@ -70,12 +73,13 @@ export function RewardEditor({ rewards, onChange, missionId }: RewardEditorProps
 interface RewardCardProps {
   index: number;
   raw: string;
+  translated?: boolean;
   onChange: (raw: string) => void;
   onRemove: () => void;
   canRemove: boolean;
 }
 
-function RewardCard({ index, raw, onChange, onRemove, canRemove }: RewardCardProps) {
+function RewardCard({ index, raw, translated, onChange, onRemove, canRemove }: RewardCardProps) {
   const reward = parseReward(raw);
 
   function updateAndSerialize(updated: RewardChoice) {
@@ -108,6 +112,9 @@ function RewardCard({ index, raw, onChange, onRemove, canRemove }: RewardCardPro
     });
   }
 
+  // Resolve the button name translation
+  const buttonHint = reward.buttonName ? translate(reward.buttonName) : undefined;
+
   return (
     <div className="card">
       <div className="card-header">
@@ -127,6 +134,12 @@ function RewardCard({ index, raw, onChange, onRemove, canRemove }: RewardCardPro
             onChange={(e) => updateMeta("buttonName", e.target.value)}
             placeholder="Translation key or display name"
           />
+          {buttonHint !== undefined && (
+            <span className="translation-hint resolved">{buttonHint}</span>
+          )}
+          {reward.buttonName && buttonHint === undefined && translated && (
+            <span className="translation-hint unresolved">No translation for "{reward.buttonName}"</span>
+          )}
         </div>
         <div className="field-group">
           <label className="field-label">Next Mission ID</label>

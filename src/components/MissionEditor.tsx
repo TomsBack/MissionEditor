@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Mission } from "../types/mission";
+import { translate } from "../utils/translations";
 import { ObjectiveEditor } from "./ObjectiveEditor";
 import { RewardEditor } from "./RewardEditor";
 
@@ -42,7 +43,7 @@ export function MissionEditor({ mission, onChange }: MissionEditorProps) {
     onChange({
       ...mission,
       props: [...mission.props, `variant_${n}`],
-      align: [...mission.align, "50"],
+      align: [...mission.align, "neutral"],
       title: [...mission.title, ""],
       subtitle: [...mission.subtitle, ""],
       description: [...mission.description, ""],
@@ -154,9 +155,7 @@ export function MissionEditor({ mission, onChange }: MissionEditorProps) {
               value={mission.title[safePropIndex] ?? ""}
               onChange={(e) => updatePropField("title", safePropIndex, e.target.value)}
             />
-            {mission.translated && mission.title[safePropIndex] && (
-              <span className="translation-hint">Key: {mission.title[safePropIndex]}</span>
-            )}
+            <TranslationHint translated={mission.translated} value={mission.title[safePropIndex]} />
           </div>
           <div className="field-group full-width">
             <label className="field-label">Subtitle</label>
@@ -164,6 +163,7 @@ export function MissionEditor({ mission, onChange }: MissionEditorProps) {
               value={mission.subtitle[safePropIndex] ?? ""}
               onChange={(e) => updatePropField("subtitle", safePropIndex, e.target.value)}
             />
+            <TranslationHint translated={mission.translated} value={mission.subtitle[safePropIndex]} />
           </div>
           <div className="field-group full-width">
             <label className="field-label">Description</label>
@@ -172,6 +172,7 @@ export function MissionEditor({ mission, onChange }: MissionEditorProps) {
               onChange={(e) => updatePropField("description", safePropIndex, e.target.value)}
               rows={3}
             />
+            <TranslationHint translated={mission.translated} value={mission.description[safePropIndex]} />
           </div>
         </div>
       </div>
@@ -180,6 +181,7 @@ export function MissionEditor({ mission, onChange }: MissionEditorProps) {
       <ObjectiveEditor
         objectives={mission.objectives[safePropIndex] ?? []}
         onChange={(objs) => updateObjectives(safePropIndex, objs)}
+        translated={mission.translated}
       />
 
       {/* Rewards */}
@@ -187,7 +189,26 @@ export function MissionEditor({ mission, onChange }: MissionEditorProps) {
         rewards={mission.rewards[safePropIndex] ?? []}
         onChange={(rwds) => updateRewards(safePropIndex, rwds)}
         missionId={mission.id}
+        translated={mission.translated}
       />
     </>
+  );
+}
+
+function TranslationHint({ translated, value }: { translated: boolean; value?: string }) {
+  if (!translated || !value?.trim()) return null;
+  const resolved = translate(value);
+  if (resolved !== undefined) {
+    const display = resolved.replace(/\/n/g, "\n");
+    return (
+      <span className="translation-hint resolved">
+        {display}
+      </span>
+    );
+  }
+  return (
+    <span className="translation-hint unresolved">
+      No translation found for "{value}"
+    </span>
   );
 }

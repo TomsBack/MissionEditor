@@ -7,14 +7,16 @@ import {
   TYPE_LABELS,
 } from "../utils/objectives";
 import { ALL_ENTITIES, ALL_ITEMS } from "../utils/registry";
+import { translate, entityDisplayName } from "../utils/translations";
 import { Autocomplete } from "./Autocomplete";
 
 interface ObjectiveEditorProps {
   objectives: string[];
   onChange: (objectives: string[]) => void;
+  translated?: boolean;
 }
 
-export function ObjectiveEditor({ objectives, onChange }: ObjectiveEditorProps) {
+export function ObjectiveEditor({ objectives, onChange, translated }: ObjectiveEditorProps) {
   function updateObjective(index: number, raw: string) {
     const updated = [...objectives];
     updated[index] = raw;
@@ -52,6 +54,7 @@ export function ObjectiveEditor({ objectives, onChange }: ObjectiveEditorProps) 
             index={i}
             raw={raw}
             isFirst={i === 0}
+            translated={translated}
             onChange={(updated) => updateObjective(i, updated)}
             onRemove={() => removeObjective(i)}
             onMoveUp={() => moveObjective(i, -1)}
@@ -67,13 +70,14 @@ interface ObjectiveCardProps {
   index: number;
   raw: string;
   isFirst: boolean;
+  translated?: boolean;
   onChange: (raw: string) => void;
   onRemove: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
 }
 
-function ObjectiveCard({ index, raw, isFirst, onChange, onRemove, onMoveUp, onMoveDown }: ObjectiveCardProps) {
+function ObjectiveCard({ index, raw, isFirst, translated, onChange, onRemove, onMoveUp, onMoveDown }: ObjectiveCardProps) {
   const obj = parseObjective(raw);
   const fields = FIELDS_BY_TYPE[obj.type] ?? [];
 
@@ -93,6 +97,23 @@ function ObjectiveCard({ index, raw, isFirst, onChange, onRemove, onMoveUp, onMo
     if (obj.type === "kill" || obj.type === "killsame" || obj.type === "talk") return ALL_ENTITIES;
     if (obj.type === "item") return ALL_ITEMS;
     return [];
+  }
+
+  // Get a hint for a field value
+  function getHint(field: keyof Objective, value: string): string | undefined {
+    if (!value) return undefined;
+
+    // Entity name hints
+    if (field === "name" && (obj.type === "kill" || obj.type === "killsame" || obj.type === "talk")) {
+      return entityDisplayName(value);
+    }
+
+    // Translation key hints for dialog and button fields
+    if (translated && (field === "dialog" || field === "button")) {
+      return translate(value);
+    }
+
+    return undefined;
   }
 
   const typeOptions = isFirst
@@ -129,12 +150,14 @@ function ObjectiveCard({ index, raw, isFirst, onChange, onRemove, onMoveUp, onMo
         <div className="field-grid">
           {fields.map((field) => {
             const suggestions = getSuggestions(field);
+            const value = obj[field] || "";
+            const hint = getHint(field, value);
             return (
               <div key={field} className="field-group">
                 <label className="field-label">{FIELD_LABELS[field]}</label>
                 {field === "protect" ? (
                   <select
-                    value={obj[field] || ""}
+                    value={value}
                     onChange={(e) => updateField(field, e.target.value)}
                   >
                     <option value="">Default (must kill specific)</option>
@@ -143,18 +166,19 @@ function ObjectiveCard({ index, raw, isFirst, onChange, onRemove, onMoveUp, onMo
                   </select>
                 ) : suggestions.length > 0 ? (
                   <Autocomplete
-                    value={obj[field] || ""}
+                    value={value}
                     onChange={(v) => updateField(field, v)}
                     suggestions={suggestions}
                     placeholder={FIELD_LABELS[field]}
                   />
                 ) : (
                   <input
-                    value={obj[field] || ""}
+                    value={value}
                     onChange={(e) => updateField(field, e.target.value)}
                     placeholder={FIELD_LABELS[field]}
                   />
                 )}
+                {hint && <span className="translation-hint resolved">{hint}</span>}
               </div>
             );
           })}
