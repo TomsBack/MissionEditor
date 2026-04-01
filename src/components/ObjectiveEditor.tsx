@@ -6,6 +6,8 @@ import {
   FIELD_LABELS,
   TYPE_LABELS,
 } from "../utils/objectives";
+import { ALL_ENTITIES, ALL_ITEMS } from "../utils/registry";
+import { Autocomplete } from "./Autocomplete";
 
 interface ObjectiveEditorProps {
   objectives: string[];
@@ -24,13 +26,12 @@ export function ObjectiveEditor({ objectives, onChange }: ObjectiveEditorProps) 
   }
 
   function removeObjective(index: number) {
-    // Don't remove the first objective (action button)
     if (index === 0) return;
     onChange(objectives.filter((_, i) => i !== index));
   }
 
   function moveObjective(index: number, direction: -1 | 1) {
-    if (index === 0) return; // Don't move action button
+    if (index === 0) return;
     const target = index + direction;
     if (target < 1 || target >= objectives.length) return;
     const updated = [...objectives];
@@ -86,7 +87,14 @@ function ObjectiveCard({ index, raw, isFirst, onChange, onRemove, onMoveUp, onMo
     onChange(serializeObjective(updated));
   }
 
-  // For the first objective, only show action button types
+  // Determine which autocomplete list to use for the "name" field
+  function getSuggestions(field: keyof Objective): string[] {
+    if (field !== "name") return [];
+    if (obj.type === "kill" || obj.type === "killsame" || obj.type === "talk") return ALL_ENTITIES;
+    if (obj.type === "item") return ALL_ITEMS;
+    return [];
+  }
+
   const typeOptions = isFirst
     ? (["next", "start", "skip", "restart"] as const)
     : OBJECTIVE_TYPES;
@@ -119,27 +127,37 @@ function ObjectiveCard({ index, raw, isFirst, onChange, onRemove, onMoveUp, onMo
 
       {fields.length > 0 && (
         <div className="field-grid">
-          {fields.map((field) => (
-            <div key={field} className="field-group">
-              <label className="field-label">{FIELD_LABELS[field]}</label>
-              {field === "protect" ? (
-                <select
-                  value={obj[field] || ""}
-                  onChange={(e) => updateField(field, e.target.value)}
-                >
-                  <option value="">Default (must kill specific)</option>
-                  <option value="spwn">Spawn (any will do)</option>
-                  <option value="no">No protect (any will do)</option>
-                </select>
-              ) : (
-                <input
-                  value={obj[field] || ""}
-                  onChange={(e) => updateField(field, e.target.value)}
-                  placeholder={FIELD_LABELS[field]}
-                />
-              )}
-            </div>
-          ))}
+          {fields.map((field) => {
+            const suggestions = getSuggestions(field);
+            return (
+              <div key={field} className="field-group">
+                <label className="field-label">{FIELD_LABELS[field]}</label>
+                {field === "protect" ? (
+                  <select
+                    value={obj[field] || ""}
+                    onChange={(e) => updateField(field, e.target.value)}
+                  >
+                    <option value="">Default (must kill specific)</option>
+                    <option value="spwn">Spawn (any will do)</option>
+                    <option value="no">No protect (any will do)</option>
+                  </select>
+                ) : suggestions.length > 0 ? (
+                  <Autocomplete
+                    value={obj[field] || ""}
+                    onChange={(v) => updateField(field, v)}
+                    suggestions={suggestions}
+                    placeholder={FIELD_LABELS[field]}
+                  />
+                ) : (
+                  <input
+                    value={obj[field] || ""}
+                    onChange={(e) => updateField(field, e.target.value)}
+                    placeholder={FIELD_LABELS[field]}
+                  />
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

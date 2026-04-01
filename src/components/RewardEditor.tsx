@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { REWARD_TYPES, TP_MODES, type RewardType, type TpMode, type RewardChoice, type RewardComponent } from "../types/mission";
 import {
   parseReward,
@@ -5,13 +6,19 @@ import {
   REWARD_TYPE_LABELS,
   TP_MODE_LABELS,
 } from "../utils/rewards";
+import { ALL_ITEMS } from "../utils/registry";
+import { Autocomplete } from "./Autocomplete";
+import { RewardPresetDialog } from "./TemplateDialog";
 
 interface RewardEditorProps {
   rewards: string[];
   onChange: (rewards: string[]) => void;
+  missionId: number;
 }
 
-export function RewardEditor({ rewards, onChange }: RewardEditorProps) {
+export function RewardEditor({ rewards, onChange, missionId }: RewardEditorProps) {
+  const [showPresets, setShowPresets] = useState(false);
+
   function updateReward(index: number, raw: string) {
     const updated = [...rewards];
     updated[index] = raw;
@@ -31,7 +38,10 @@ export function RewardEditor({ rewards, onChange }: RewardEditorProps) {
     <div className="editor-section">
       <div className="editor-section-header">
         <span>Rewards</span>
-        <button className="small" onClick={addReward}>+ Add Reward Choice</button>
+        <div style={{ display: "flex", gap: 4 }}>
+          <button className="small" onClick={() => setShowPresets(true)}>Presets</button>
+          <button className="small" onClick={addReward}>+ Add Choice</button>
+        </div>
       </div>
       <div className="card-list">
         {rewards.map((raw, i) => (
@@ -45,6 +55,14 @@ export function RewardEditor({ rewards, onChange }: RewardEditorProps) {
           />
         ))}
       </div>
+
+      {showPresets && (
+        <RewardPresetDialog
+          nextMissionId={missionId + 1}
+          onApply={(presetRewards) => onChange(presetRewards)}
+          onClose={() => setShowPresets(false)}
+        />
+      )}
     </div>
   );
 }
@@ -76,20 +94,18 @@ function RewardCard({ index, raw, onChange, onRemove, canRemove }: RewardCardPro
   }
 
   function addComponent() {
-    const updated = {
+    updateAndSerialize({
       ...reward,
-      components: [...reward.components, { type: "nothing" as RewardType, value: "" }],
-    };
-    updateAndSerialize(updated);
+      components: [...reward.components, { type: "nothing", value: "" }],
+    });
   }
 
   function removeComponent(compIndex: number) {
     if (reward.components.length <= 1) return;
-    const updated = {
+    updateAndSerialize({
       ...reward,
       components: reward.components.filter((_, i) => i !== compIndex),
-    };
-    updateAndSerialize(updated);
+    });
   }
 
   return (
@@ -99,9 +115,7 @@ function RewardCard({ index, raw, onChange, onRemove, canRemove }: RewardCardPro
           <span className="card-index">Choice #{index + 1}</span>
         </div>
         <div className="card-actions">
-          {canRemove && (
-            <button className="small danger" onClick={onRemove}>x</button>
-          )}
+          {canRemove && <button className="small danger" onClick={onRemove}>x</button>}
         </div>
       </div>
 
@@ -210,9 +224,10 @@ function RewardComponentRow({ component, onChange, onRemove, canRemove }: Reward
 
       {component.type === "item" && (
         <div className="field-group" style={{ flex: 1 }}>
-          <input
+          <Autocomplete
             value={component.value}
-            onChange={(e) => onChange({ ...component, value: e.target.value })}
+            onChange={(v) => onChange({ ...component, value: v })}
+            suggestions={ALL_ITEMS}
             placeholder="mod:itemname::metadata,count"
           />
         </div>

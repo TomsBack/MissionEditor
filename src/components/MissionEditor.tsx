@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Mission } from "../types/mission";
 import { ObjectiveEditor } from "./ObjectiveEditor";
 import { RewardEditor } from "./RewardEditor";
@@ -8,8 +9,11 @@ interface MissionEditorProps {
 }
 
 export function MissionEditor({ mission, onChange }: MissionEditorProps) {
-  const propIndex = 0; // For now, always edit the first property variant
-  const propCount = mission.props.length;
+  const [propIndex, setPropIndex] = useState(0);
+
+  // Clamp propIndex if it goes out of range
+  const safePropIndex = Math.min(propIndex, mission.props.length - 1);
+  if (safePropIndex !== propIndex) setPropIndex(safePropIndex);
 
   function updateField<K extends keyof Mission>(key: K, value: Mission[K]) {
     onChange({ ...mission, [key]: value });
@@ -33,8 +37,41 @@ export function MissionEditor({ mission, onChange }: MissionEditorProps) {
     updateField("rewards", arr);
   }
 
+  function addVariant() {
+    const n = mission.props.length;
+    onChange({
+      ...mission,
+      props: [...mission.props, `variant_${n}`],
+      align: [...mission.align, "50"],
+      title: [...mission.title, ""],
+      subtitle: [...mission.subtitle, ""],
+      description: [...mission.description, ""],
+      objectives: [...mission.objectives, ["start"]],
+      rewards: [...mission.rewards, ["nothing;;0"]],
+    });
+    setPropIndex(n);
+  }
+
+  function removeVariant(index: number) {
+    if (mission.props.length <= 1) return;
+    const remove = <T,>(arr: T[]) => arr.filter((_, i) => i !== index);
+    onChange({
+      ...mission,
+      props: remove(mission.props),
+      align: remove(mission.align),
+      title: remove(mission.title),
+      subtitle: remove(mission.subtitle),
+      description: remove(mission.description),
+      objectives: remove(mission.objectives),
+      rewards: remove(mission.rewards),
+    });
+    if (propIndex >= mission.props.length - 1) {
+      setPropIndex(Math.max(0, mission.props.length - 2));
+    }
+  }
+
   return (
-    <div className="editor-panel">
+    <>
       {/* Mission Metadata */}
       <div className="editor-section">
         <div className="editor-section-header">Mission #{mission.id}</div>
@@ -64,56 +101,71 @@ export function MissionEditor({ mission, onChange }: MissionEditorProps) {
       </div>
 
       {/* Property Variant Tabs */}
-      {propCount > 1 && (
+      <div className="editor-section">
         <div className="prop-tabs">
           {mission.props.map((p, i) => (
-            <span
+            <div
               key={i}
-              className={`prop-tab ${i === propIndex ? "active" : ""}`}
+              className={`prop-tab ${i === safePropIndex ? "active" : ""}`}
+              onClick={() => setPropIndex(i)}
             >
               {p || `Variant ${i}`}
-            </span>
+              {mission.props.length > 1 && (
+                <span
+                  className="prop-tab-close"
+                  onClick={(e) => { e.stopPropagation(); removeVariant(i); }}
+                >
+                  x
+                </span>
+              )}
+            </div>
           ))}
+          <button className="small" onClick={addVariant}>+ Variant</button>
         </div>
-      )}
+      </div>
 
       {/* Per-variant fields */}
       <div className="editor-section">
-        <div className="editor-section-header">Content (Variant: {mission.props[propIndex] || "default"})</div>
+        <div className="editor-section-header">
+          Content (Variant: {mission.props[safePropIndex] || "default"})
+        </div>
         <div className="field-grid">
           <div className="field-group">
             <label className="field-label">Property / Race+Class</label>
             <input
-              value={mission.props[propIndex] ?? ""}
-              onChange={(e) => updatePropField("props", propIndex, e.target.value)}
+              value={mission.props[safePropIndex] ?? ""}
+              onChange={(e) => updatePropField("props", safePropIndex, e.target.value)}
             />
           </div>
           <div className="field-group">
             <label className="field-label">Alignment</label>
             <input
-              value={mission.align[propIndex] ?? ""}
-              onChange={(e) => updatePropField("align", propIndex, e.target.value)}
+              value={mission.align[safePropIndex] ?? ""}
+              onChange={(e) => updatePropField("align", safePropIndex, e.target.value)}
             />
           </div>
           <div className="field-group full-width">
             <label className="field-label">Title</label>
             <input
-              value={mission.title[propIndex] ?? ""}
-              onChange={(e) => updatePropField("title", propIndex, e.target.value)}
+              value={mission.title[safePropIndex] ?? ""}
+              onChange={(e) => updatePropField("title", safePropIndex, e.target.value)}
             />
+            {mission.translated && mission.title[safePropIndex] && (
+              <span className="translation-hint">Key: {mission.title[safePropIndex]}</span>
+            )}
           </div>
           <div className="field-group full-width">
             <label className="field-label">Subtitle</label>
             <input
-              value={mission.subtitle[propIndex] ?? ""}
-              onChange={(e) => updatePropField("subtitle", propIndex, e.target.value)}
+              value={mission.subtitle[safePropIndex] ?? ""}
+              onChange={(e) => updatePropField("subtitle", safePropIndex, e.target.value)}
             />
           </div>
           <div className="field-group full-width">
             <label className="field-label">Description</label>
             <textarea
-              value={mission.description[propIndex] ?? ""}
-              onChange={(e) => updatePropField("description", propIndex, e.target.value)}
+              value={mission.description[safePropIndex] ?? ""}
+              onChange={(e) => updatePropField("description", safePropIndex, e.target.value)}
               rows={3}
             />
           </div>
@@ -122,15 +174,16 @@ export function MissionEditor({ mission, onChange }: MissionEditorProps) {
 
       {/* Objectives */}
       <ObjectiveEditor
-        objectives={mission.objectives[propIndex] ?? []}
-        onChange={(objs) => updateObjectives(propIndex, objs)}
+        objectives={mission.objectives[safePropIndex] ?? []}
+        onChange={(objs) => updateObjectives(safePropIndex, objs)}
       />
 
       {/* Rewards */}
       <RewardEditor
-        rewards={mission.rewards[propIndex] ?? []}
-        onChange={(rwds) => updateRewards(propIndex, rwds)}
+        rewards={mission.rewards[safePropIndex] ?? []}
+        onChange={(rwds) => updateRewards(safePropIndex, rwds)}
+        missionId={mission.id}
       />
-    </div>
+    </>
   );
 }
