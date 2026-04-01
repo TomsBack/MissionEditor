@@ -75,15 +75,21 @@ export function FlowGraph({ bundle, selectedMission, onSelectMission }: FlowGrap
     if (roots.length === 0 && allIds.length > 0) roots.push(allIds[0]);
 
     const queue: number[] = [];
+    const visited = new Map<number, number>(); // id -> visit count (cycle protection)
     for (const r of roots) {
       layers.set(r, 0);
       queue.push(r);
+      visited.set(r, 0);
     }
 
+    const maxVisits = allIds.length + 1;
     while (queue.length > 0) {
       const id = queue.shift()!;
       const layer = layers.get(id) ?? 0;
       for (const next of outgoing.get(id) ?? []) {
+        const count = (visited.get(next) ?? 0) + 1;
+        if (count > maxVisits) continue; // cycle detected, stop propagating
+        visited.set(next, count);
         const existing = layers.get(next);
         if (existing === undefined || existing < layer + 1) {
           layers.set(next, layer + 1);

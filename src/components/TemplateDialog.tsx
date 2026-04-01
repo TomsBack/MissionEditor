@@ -23,8 +23,8 @@ export function TemplateDialog({ nextId, onSelect, onClose }: TemplateDialogProp
                 className="template-card"
                 onClick={() => { onSelect(t.create(nextId)); onClose(); }}
               >
-                <div className="template-name">{t.name}</div>
-                <div className="template-desc">{t.description}</div>
+                <div className="template-card-name">{t.name}</div>
+                <div className="template-card-desc">{t.description}</div>
               </div>
             ))}
           </div>
@@ -62,8 +62,8 @@ export function RewardPresetDialog({ nextMissionId, onApply, onClose }: RewardPr
                 className="template-card"
                 onClick={() => { onApply(p.apply()); onClose(); }}
               >
-                <div className="template-name">{p.name}</div>
-                <div className="template-desc">{p.desc}</div>
+                <div className="template-card-name">{p.name}</div>
+                <div className="template-card-desc">{p.desc}</div>
               </div>
             ))}
           </div>

@@ -9,8 +9,8 @@ interface HistoryState<T> {
 const MAX_HISTORY = 100;
 
 /**
- * Undo/redo hook. Returns [state, setState, undo, redo, canUndo, canRedo].
- * setState pushes to history. undo/redo navigate the history stack.
+ * Undo/redo hook with debounced batching for rapid changes (e.g. typing).
+ * `set(value)` debounces by default. `set(value, true)` commits immediately.
  */
 export function useHistory<T>(initialState: T) {
   const [history, setHistory] = useState<HistoryState<T>>({
@@ -19,48 +19,61 @@ export function useHistory<T>(initialState: T) {
     future: [],
   });
 
-  // Use a ref to debounce rapid changes (typing) into single undo entries
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingRef = useRef<T | null>(null);
+  // Tracks the state before debounced edits started, so we can push it to past
+  const preEditRef = useRef<T | null>(null);
 
   const set = useCallback((newState: T, immediate = false) => {
     if (immediate) {
+      // Flush any pending debounce
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      preEditRef.current = null;
+
       setHistory((h) => ({
         past: [...h.past, h.present].slice(-MAX_HISTORY),
         present: newState,
         future: [],
       }));
-      pendingRef.current = null;
-      if (debounceRef.current) clearTimeout(debounceRef.current);
       return;
     }
 
-    // Debounced: batch rapid changes into one undo entry
-    pendingRef.current = newState;
-    setHistory((h) => ({ ...h, present: newState }));
+    // Debounced: first change in a burst saves the "before" state
+    setHistory((h) => {
+      if (preEditRef.current === null) {
+        preEditRef.current = h.present;
+      }
+      return { ...h, present: newState, future: [] };
+    });
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
+      // Commit: push the pre-edit state to past
       setHistory((h) => {
-        if (pendingRef.current === null) return h;
-        // Find the last committed state (the one before debouncing started)
-        const lastCommitted = h.past[h.past.length - 1];
-        if (lastCommitted === h.present) return h;
-        return {
-          past: [...h.past, h.present].slice(-MAX_HISTORY),
-          present: h.present,
-          future: [],
-        };
+        if (preEditRef.current === null) return h;
+        const past = [...h.past, preEditRef.current].slice(-MAX_HISTORY);
+        preEditRef.current = null;
+        return { ...h, past };
       });
-      pendingRef.current = null;
     }, 500);
   }, []);
 
   const undo = useCallback(() => {
+    // Flush pending debounce before undoing
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    pendingRef.current = null;
 
     setHistory((h) => {
+      // If we have a pre-edit snapshot, use it as the "before" entry
+      if (preEditRef.current !== null) {
+        const past = [...h.past, preEditRef.current];
+        preEditRef.current = null;
+        const previous = past[past.length - 1];
+        return {
+          past: past.slice(0, -1),
+          present: previous,
+          future: [h.present, ...h.future],
+        };
+      }
+
       if (h.past.length === 0) return h;
       const previous = h.past[h.past.length - 1];
       return {
@@ -85,7 +98,7 @@ export function useHistory<T>(initialState: T) {
 
   const reset = useCallback((newState: T) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    pendingRef.current = null;
+    preEditRef.current = null;
     setHistory({ past: [], present: newState, future: [] });
   }, []);
 
@@ -95,7 +108,7 @@ export function useHistory<T>(initialState: T) {
     undo,
     redo,
     reset,
-    canUndo: history.past.length > 0,
+    canUndo: history.past.length > 0 || preEditRef.current !== null,
     canRedo: history.future.length > 0,
   };
 }

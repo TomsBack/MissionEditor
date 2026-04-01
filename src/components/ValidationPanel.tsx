@@ -9,29 +9,33 @@ export function ValidationPanel({ warnings, onNavigate }: ValidationPanelProps) 
   if (warnings.length === 0) {
     return (
       <div className="validation-panel">
-        <span className="validation-ok">No issues found</span>
+        <div className="validation-empty">No issues found</div>
       </div>
     );
   }
 
+  const errors = warnings.filter((w) => w.level === "error");
+  const warns = warnings.filter((w) => w.level === "warning");
+
   return (
     <div className="validation-panel">
-      <div className="validation-header">
-        {warnings.length} issue{warnings.length !== 1 ? "s" : ""}
+      <div className="validation-summary">
+        {errors.length > 0 && <span className="validation-count error">{errors.length} error{errors.length !== 1 ? "s" : ""}</span>}
+        {warns.length > 0 && <span className="validation-count warning">{warns.length} warning{warns.length !== 1 ? "s" : ""}</span>}
       </div>
-      <div className="validation-list">
-        {warnings.map((w, i) => (
-          <div
-            key={i}
-            className={`validation-item validation-${w.level}`}
-            onClick={() => onNavigate(w.missionIndex)}
-          >
-            <span className="validation-badge">{w.level === "error" ? "ERR" : "WARN"}</span>
-            <span className="validation-id">#{w.missionId}</span>
-            <span className="validation-msg">{w.message}</span>
-          </div>
-        ))}
-      </div>
+      {warnings.map((w, i) => (
+        <div
+          key={i}
+          className="validation-item"
+          onClick={() => onNavigate(w.missionIndex)}
+        >
+          <span className={`validation-icon ${w.level}`}>
+            {w.level === "error" ? "\u2716" : "\u26A0"}
+          </span>
+          <span className="validation-location">#{w.missionId}</span>
+          <span className="validation-message">{w.message}</span>
+        </div>
+      ))}
     </div>
   );
 }

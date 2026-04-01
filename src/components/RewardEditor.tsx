@@ -229,6 +229,7 @@ function RewardComponentRow({ component, onChange, onRemove, canRemove }: Reward
             onChange={(v) => onChange({ ...component, value: v })}
             suggestions={ALL_ITEMS}
             placeholder="mod:itemname::metadata,count"
+            valueSeparator=","
           />
         </div>
       )}

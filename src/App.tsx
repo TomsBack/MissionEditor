@@ -10,6 +10,7 @@ import {
 import { useHistory } from "./utils/history";
 import { validateBundle, type ValidationWarning } from "./utils/validation";
 import { getStoredTheme, setStoredTheme, applyTheme, type Theme } from "./utils/theme";
+import { loadSettings, saveSettings, type EditorSettings } from "./utils/settings";
 import { Sidebar } from "./components/Sidebar";
 import { BundleEditor } from "./components/BundleEditor";
 import { MissionEditor } from "./components/MissionEditor";
@@ -17,6 +18,7 @@ import { ValidationPanel } from "./components/ValidationPanel";
 import { FlowGraph } from "./components/FlowGraph";
 import { ExportPreview } from "./components/ExportPreview";
 import { TemplateDialog } from "./components/TemplateDialog";
+import { SettingsDialog } from "./components/SettingsDialog";
 
 interface LoadedBundle {
   bundle: MissionBundle;
@@ -34,11 +36,10 @@ function App() {
   const [bottomTab, setBottomTab] = useState<BottomTab>(null);
   const [showExport, setShowExport] = useState(false);
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [theme, setThemeState] = useState<Theme>(getStoredTheme());
   const [recentFiles, setRecentFiles] = useState<string[]>(getRecentFiles());
-
-  const historyRef = useRef(bundles);
-  historyRef.current = bundles;
+  const [settings, setSettingsState] = useState<EditorSettings>(loadSettings);
 
   // Undo/redo for bundle state
   const {
@@ -51,10 +52,14 @@ function App() {
     canRedo,
   } = useHistory<LoadedBundle[]>([]);
 
-  // Sync undo state to bundles
+  // Sync undo state to bundles (only when undo/redo navigates)
+  const undoStateRef = useRef(undoState);
   useEffect(() => {
-    if (undoState !== bundles && undoState.length > 0) {
-      setBundles(undoState);
+    if (undoState !== undoStateRef.current) {
+      undoStateRef.current = undoState;
+      if (undoState.length > 0) {
+        setBundles(undoState);
+      }
     }
   }, [undoState]);
 
@@ -70,17 +75,23 @@ function App() {
     applyTheme(next);
   }
 
-  // Auto-save every 30 seconds
+  function updateSettings(updated: EditorSettings) {
+    setSettingsState(updated);
+    saveSettings(updated);
+  }
+
+  // Auto-save at the configured interval
   useEffect(() => {
+    if (!settings.autoSaveEnabled) return;
     const interval = setInterval(() => {
       if (bundles.some((b) => b.dirty)) {
         saveAutoSaveData({
           bundles: bundles.map((b) => ({ bundle: b.bundle, path: b.path })),
         });
       }
-    }, 30000);
+    }, settings.autoSaveInterval * 1000);
     return () => clearInterval(interval);
-  }, [bundles]);
+  }, [bundles, settings.autoSaveEnabled, settings.autoSaveInterval]);
 
   // Recover auto-save on mount
   useEffect(() => {
@@ -157,8 +168,10 @@ function App() {
         dirty: false,
         originalJson: JSON.stringify(result.bundle, null, 2),
       };
-      setBundlesWithUndo((prev) => [...prev, entry], true);
-      setSelectedBundle(bundles.length);
+      setBundlesWithUndo((prev) => {
+        setSelectedBundle(prev.length);
+        return [...prev, entry];
+      }, true);
       setSelectedMission(0);
       setRecentFiles(getRecentFiles());
     } catch (err) {
@@ -175,8 +188,10 @@ function App() {
         dirty: false,
         originalJson: JSON.stringify(result.bundle, null, 2),
       };
-      setBundlesWithUndo((prev) => [...prev, entry], true);
-      setSelectedBundle(bundles.length);
+      setBundlesWithUndo((prev) => {
+        setSelectedBundle(prev.length);
+        return [...prev, entry];
+      }, true);
       setSelectedMission(0);
       setRecentFiles(getRecentFiles());
     } catch (err) {
@@ -194,8 +209,10 @@ function App() {
         dirty: false,
         originalJson: JSON.stringify(r.bundle, null, 2),
       }));
-      setBundlesWithUndo((prev) => [...prev, ...entries], true);
-      setSelectedBundle(bundles.length);
+      setBundlesWithUndo((prev) => {
+        setSelectedBundle(prev.length);
+        return [...prev, ...entries];
+      }, true);
       setSelectedMission(0);
     } catch (err) {
       console.error("Failed to import:", err);
@@ -203,8 +220,10 @@ function App() {
   }
 
   function handleNew() {
-    setBundlesWithUndo((prev) => [...prev, { bundle: createEmptyBundle(), dirty: true }], true);
-    setSelectedBundle(bundles.length);
+    setBundlesWithUndo((prev) => {
+      setSelectedBundle(prev.length);
+      return [...prev, { bundle: createEmptyBundle(), dirty: true }];
+    }, true);
     setSelectedMission(0);
   }
 
@@ -373,6 +392,7 @@ function App() {
         <button onClick={redo} disabled={!canRedo} title="Ctrl+Y">Redo</button>
         <span className="toolbar-sep" />
         <button onClick={toggleTheme} title="Toggle theme">{theme === "dark" ? "Light" : "Dark"}</button>
+        <button onClick={() => setShowSettings(true)} title="Settings">Settings</button>
         <button onClick={handleCloseBundle} disabled={!current} className="danger">Close</button>
 
         {/* Recent files dropdown */}
@@ -476,6 +496,13 @@ function App() {
           nextId={nextId}
           onSelect={handleAddFromTemplate}
           onClose={() => setShowTemplateDialog(false)}
+        />
+      )}
+      {showSettings && (
+        <SettingsDialog
+          settings={settings}
+          onChange={updateSettings}
+          onClose={() => setShowSettings(false)}
         />
       )}
     </div>
