@@ -107,17 +107,16 @@ function validateBundleInner(bundle: MissionBundle): ValidationWarning[] {
         });
       }
 
-      // Alignment validation (can be a number 0-100 or a keyword like "neutral")
+      // Alignment validation: only "Good", "Neutral", "Evil" are valid (case-insensitive)
       const alignVal = mission.align[pi];
       if (alignVal !== undefined && alignVal.trim() !== "") {
-        const num = Number(alignVal);
-        const validKeywords = ["neutral", "good", "evil"];
-        if (!validKeywords.includes(alignVal.trim().toLowerCase()) && (isNaN(num) || num < 0 || num > 100)) {
+        const valid = ["good", "neutral", "evil"];
+        if (!valid.includes(alignVal.trim().toLowerCase())) {
           warnings.push({
             level: "warning",
             missionIndex: mi,
             missionId: mission.id,
-            message: `Alignment "${alignVal}" should be 0-100 or a keyword (neutral/good/evil)${variantLabel}`,
+            message: `Alignment "${alignVal}" should be Good, Neutral, or Evil${variantLabel}`,
           });
         }
       }

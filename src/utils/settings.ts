@@ -5,7 +5,7 @@ export interface EditorSettings {
   autoSaveInterval: number; // seconds
   jsonIndent: number;
   defaultTranslated: boolean;
-  defaultAlignment: string;
+  defaultAlignment: "good" | "neutral" | "evil";
   showAdvancedObjectiveFields: boolean;
 }
 
@@ -14,7 +14,7 @@ const DEFAULTS: EditorSettings = {
   autoSaveInterval: 30,
   jsonIndent: 2,
   defaultTranslated: false,
-  defaultAlignment: "50",
+  defaultAlignment: "neutral",
   showAdvancedObjectiveFields: false,
 };
 

@@ -116,7 +116,7 @@ export function createEmptyMission(id: number): MissionBundle["missions"][0] {
     id,
     translated: false,
     props: ["default"],
-    align: ["50"],
+    align: ["neutral"],
     title: ["New Mission"],
     subtitle: [""],
     description: [""],

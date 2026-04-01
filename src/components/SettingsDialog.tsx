@@ -75,12 +75,15 @@ export function SettingsDialog({ settings, onChange, onClose }: SettingsDialogPr
             </div>
             <div className="settings-row">
               <label className="settings-label">Default alignment</label>
-              <input
+              <select
                 value={settings.defaultAlignment}
-                onChange={(e) => update("defaultAlignment", e.target.value)}
-                style={{ width: 80 }}
-                placeholder="50"
-              />
+                onChange={(e) => update("defaultAlignment", e.target.value as "good" | "neutral" | "evil")}
+                style={{ width: 100 }}
+              >
+                <option value="good">Good</option>
+                <option value="neutral">Neutral</option>
+                <option value="evil">Evil</option>
+              </select>
             </div>
           </div>
 

@@ -139,10 +139,14 @@ export function MissionEditor({ mission, onChange }: MissionEditorProps) {
           </div>
           <div className="field-group">
             <label className="field-label">Alignment</label>
-            <input
-              value={mission.align[safePropIndex] ?? ""}
+            <select
+              value={mission.align[safePropIndex]?.toLowerCase() ?? "neutral"}
               onChange={(e) => updatePropField("align", safePropIndex, e.target.value)}
-            />
+            >
+              <option value="good">Good</option>
+              <option value="neutral">Neutral</option>
+              <option value="evil">Evil</option>
+            </select>
           </div>
           <div className="field-group full-width">
             <label className="field-label">Title</label>

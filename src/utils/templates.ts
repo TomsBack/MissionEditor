@@ -11,7 +11,7 @@ function baseMission(id: number, title: string): Mission {
     id,
     translated: false,
     props: ["default"],
-    align: ["50"],
+    align: ["neutral"],
     title: [title],
     subtitle: [""],
     description: [""],
