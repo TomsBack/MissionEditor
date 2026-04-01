@@ -11,6 +11,15 @@ export interface ValidationWarning {
 
 /** Validate an entire bundle and return all warnings. */
 export function validateBundle(bundle: MissionBundle): ValidationWarning[] {
+  try {
+    return validateBundleInner(bundle);
+  } catch (err) {
+    console.error("Validation error:", err);
+    return [{ level: "error", missionIndex: -1, missionId: -1, message: `Validation crashed: ${err}` }];
+  }
+}
+
+function validateBundleInner(bundle: MissionBundle): ValidationWarning[] {
   const warnings: ValidationWarning[] = [];
   const allIds = new Set<number>();
   const missionIdSet = new Set(bundle.missions.map((m) => m.id));
@@ -311,7 +320,8 @@ export function validateBundle(bundle: MissionBundle): ValidationWarning[] {
   if (bundle.missions.length > 1) {
     const referencedIds = new Set<number>();
     for (const m of bundle.missions) {
-      for (const variantRewards of m.rewards) {
+      for (const variantRewards of m.rewards ?? []) {
+        if (!Array.isArray(variantRewards)) continue;
         for (const raw of variantRewards) {
           const reward = parseReward(raw);
           if (reward.nextMissionId !== 0) {
