@@ -107,38 +107,19 @@ function validateBundleInner(bundle: MissionBundle): ValidationWarning[] {
         });
       }
 
-      // Alignment validation
+      // Alignment validation (can be a number 0-100 or a keyword like "neutral")
       const alignVal = mission.align[pi];
       if (alignVal !== undefined && alignVal.trim() !== "") {
         const num = Number(alignVal);
-        if (isNaN(num) || num < 0 || num > 100) {
+        const validKeywords = ["neutral", "good", "evil"];
+        if (!validKeywords.includes(alignVal.trim().toLowerCase()) && (isNaN(num) || num < 0 || num > 100)) {
           warnings.push({
             level: "warning",
             missionIndex: mi,
             missionId: mission.id,
-            message: `Alignment "${alignVal}" should be 0-100${variantLabel}`,
+            message: `Alignment "${alignVal}" should be 0-100 or a keyword (neutral/good/evil)${variantLabel}`,
           });
         }
-      }
-
-      // No objectives
-      if (objectives.length === 0) {
-        warnings.push({
-          level: "error",
-          missionIndex: mi,
-          missionId: mission.id,
-          message: `No objectives defined${variantLabel}`,
-        });
-      }
-
-      // No rewards
-      if (rewards.length === 0) {
-        warnings.push({
-          level: "error",
-          missionIndex: mi,
-          missionId: mission.id,
-          message: `No rewards defined${variantLabel}`,
-        });
       }
 
       // First objective should be an action type
