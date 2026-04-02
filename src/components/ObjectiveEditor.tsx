@@ -1,4 +1,5 @@
 import { OBJECTIVE_TYPES, type ObjectiveType, type Objective } from "../types/mission";
+import { useTranslation } from "react-i18next";
 import {
   parseObjective,
   serializeObjective,
@@ -7,16 +8,26 @@ import {
   TYPE_LABELS,
 } from "../utils/objectives";
 import { ALL_ENTITIES, ALL_ITEMS } from "../utils/registry";
-import { translate, entityDisplayName } from "../utils/translations";
+import { translate, entityDisplayName, itemDisplayName, keysWithPrefix, onLanguageChange } from "../utils/translations";
 import { Autocomplete } from "./Autocomplete";
+
+/** Fields considered "advanced" - hidden unless showAdvancedFields is true. */
+const ADVANCED_FIELDS: Set<keyof Objective> = new Set([
+  "spawnMessage", "deathMessage", "protect", "transformations",
+  "spawnSound", "deathSound",
+]);
 
 interface ObjectiveEditorProps {
   objectives: string[];
   onChange: (objectives: string[]) => void;
   translated?: boolean;
+  showHints?: boolean;
+  showAdvancedFields?: boolean;
 }
 
-export function ObjectiveEditor({ objectives, onChange, translated }: ObjectiveEditorProps) {
+export function ObjectiveEditor({ objectives, onChange, translated, showHints = true, showAdvancedFields = true }: ObjectiveEditorProps) {
+  const { t } = useTranslation();
+
   function updateObjective(index: number, raw: string) {
     const updated = [...objectives];
     updated[index] = raw;
@@ -44,8 +55,8 @@ export function ObjectiveEditor({ objectives, onChange, translated }: ObjectiveE
   return (
     <div className="editor-section">
       <div className="editor-section-header">
-        <span>Objectives</span>
-        <button className="small" onClick={addObjective}>+ Add Objective</button>
+        <span>{t("objectives.title")}</span>
+        <button className="small" onClick={addObjective}>{t("objectives.add")}</button>
       </div>
       <div className="card-list">
         {objectives.map((raw, i) => (
@@ -55,6 +66,8 @@ export function ObjectiveEditor({ objectives, onChange, translated }: ObjectiveE
             raw={raw}
             isFirst={i === 0}
             translated={translated}
+            showHints={showHints}
+            showAdvancedFields={showAdvancedFields}
             onChange={(updated) => updateObjective(i, updated)}
             onRemove={() => removeObjective(i)}
             onMoveUp={() => moveObjective(i, -1)}
@@ -71,15 +84,37 @@ interface ObjectiveCardProps {
   raw: string;
   isFirst: boolean;
   translated?: boolean;
+  showHints?: boolean;
+  showAdvancedFields?: boolean;
   onChange: (raw: string) => void;
   onRemove: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
 }
 
-function ObjectiveCard({ index, raw, isFirst, translated, onChange, onRemove, onMoveUp, onMoveDown }: ObjectiveCardProps) {
+// Invalidate cache when language changes
+let _sagaKeys: string[] | null = null;
+onLanguageChange(() => { _sagaKeys = null; });
+
+// Cached outside component to avoid recomputing on every render
+function getSagaTranslationKeys(): string[] {
+  if (!_sagaKeys) {
+    _sagaKeys = [
+      ...keysWithPrefix("dbc.saga"),
+      ...keysWithPrefix("nc.saga"),
+      ...keysWithPrefix("jinryuujrmcore.mission"),
+      ...keysWithPrefix("jinryuujrmcore.reward"),
+    ];
+  }
+  return _sagaKeys;
+}
+
+function ObjectiveCard({ index, raw, isFirst, translated, showHints = true, showAdvancedFields = true, onChange, onRemove, onMoveUp, onMoveDown }: ObjectiveCardProps) {
+  const { t } = useTranslation();
   const obj = parseObjective(raw);
-  const fields = FIELDS_BY_TYPE[obj.type] ?? [];
+  const allFields = FIELDS_BY_TYPE[obj.type] ?? [];
+  const fields = showAdvancedFields ? allFields : allFields.filter((f) => !ADVANCED_FIELDS.has(f));
+  const translationKeySuggestions = translated ? getSagaTranslationKeys() : [];
 
   function updateField(field: keyof Objective, value: string) {
     const updated = { ...obj, [field]: value };
@@ -91,11 +126,16 @@ function ObjectiveCard({ index, raw, isFirst, translated, onChange, onRemove, on
     onChange(serializeObjective(updated));
   }
 
-  // Determine which autocomplete list to use for the "name" field
+  // Determine which autocomplete list to use for each field
   function getSuggestions(field: keyof Objective): string[] {
-    if (field !== "name") return [];
-    if (obj.type === "kill" || obj.type === "killsame" || obj.type === "talk") return ALL_ENTITIES;
-    if (obj.type === "item") return ALL_ITEMS;
+    if (field === "name") {
+      if (obj.type === "kill" || obj.type === "killsame" || obj.type === "talk") return ALL_ENTITIES;
+      if (obj.type === "item") return ALL_ITEMS;
+    }
+    // Translation key autocomplete for translatable text fields
+    if (translated && (field === "dialog" || field === "button" || field === "spawnMessage" || field === "deathMessage")) {
+      return translationKeySuggestions;
+    }
     return [];
   }
 
@@ -108,8 +148,13 @@ function ObjectiveCard({ index, raw, isFirst, translated, onChange, onRemove, on
       return entityDisplayName(value);
     }
 
-    // Translation key hints for dialog and button fields
-    if (translated && (field === "dialog" || field === "button")) {
+    // Item name hints
+    if (field === "name" && obj.type === "item") {
+      return itemDisplayName(value);
+    }
+
+    // Translation key hints for dialog, button, spawn message, death message
+    if (field === "dialog" || field === "button" || field === "spawnMessage" || field === "deathMessage") {
       return translate(value);
     }
 
@@ -124,23 +169,23 @@ function ObjectiveCard({ index, raw, isFirst, translated, onChange, onRemove, on
     <div className="card">
       <div className="card-header">
         <div className="card-header-left">
-          <span className="card-index">{isFirst ? "Action" : `#${index}`}</span>
+          <span className="card-index">{isFirst ? t("objectives.action") : `#${index}`}</span>
           <select
             value={obj.type}
             onChange={(e) => updateType(e.target.value as ObjectiveType)}
             style={{ width: "auto" }}
           >
-            {typeOptions.map((t) => (
-              <option key={t} value={t}>{TYPE_LABELS[t]}</option>
+            {typeOptions.map((ot) => (
+              <option key={ot} value={ot}>{TYPE_LABELS[ot]}</option>
             ))}
           </select>
         </div>
         <div className="card-actions">
           {!isFirst && (
             <>
-              <button className="small" onClick={onMoveUp} title="Move up">^</button>
-              <button className="small" onClick={onMoveDown} title="Move down">v</button>
-              <button className="small danger" onClick={onRemove} title="Remove">x</button>
+              <button className="small" onClick={onMoveUp} title={t("objectives.moveUp")}>^</button>
+              <button className="small" onClick={onMoveDown} title={t("objectives.moveDown")}>v</button>
+              <button className="small danger" onClick={onRemove} title={t("objectives.remove")}>x</button>
             </>
           )}
         </div>
@@ -160,9 +205,9 @@ function ObjectiveCard({ index, raw, isFirst, translated, onChange, onRemove, on
                     value={value}
                     onChange={(e) => updateField(field, e.target.value)}
                   >
-                    <option value="">Default (must kill specific)</option>
-                    <option value="spwn">Spawn (any will do)</option>
-                    <option value="no">No protect (any will do)</option>
+                    <option value="">{t("protect.default")}</option>
+                    <option value="spwn">{t("protect.spawn")}</option>
+                    <option value="no">{t("protect.no")}</option>
                   </select>
                 ) : suggestions.length > 0 ? (
                   <Autocomplete
@@ -178,7 +223,10 @@ function ObjectiveCard({ index, raw, isFirst, translated, onChange, onRemove, on
                     placeholder={FIELD_LABELS[field]}
                   />
                 )}
-                {hint && <span className="translation-hint resolved">{hint}</span>}
+                {showHints && hint && <span className="translation-hint resolved">{hint}</span>}
+                {showHints && !hint && value && (field === "spawnMessage" || field === "deathMessage" || field === "dialog" || field === "button") && (
+                  <span className="translation-hint unresolved">{t("objectives.noTranslation", { value })}</span>
+                )}
               </div>
             );
           })}

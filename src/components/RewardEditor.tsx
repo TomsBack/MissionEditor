@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { REWARD_TYPES, TP_MODES, type RewardType, type TpMode, type RewardChoice, type RewardComponent } from "../types/mission";
+import { useTranslation } from "react-i18next";
 import {
   parseReward,
   serializeReward,
@@ -7,18 +8,30 @@ import {
   TP_MODE_LABELS,
 } from "../utils/rewards";
 import { ALL_ITEMS } from "../utils/registry";
-import { translate } from "../utils/translations";
+import { translate, keysWithPrefix, onLanguageChange } from "../utils/translations";
 import { Autocomplete } from "./Autocomplete";
 import { RewardPresetDialog } from "./TemplateDialog";
+
+// Cached button name translation keys for autocomplete (invalidated on language change)
+let _buttonNameKeys: string[] | null = null;
+onLanguageChange(() => { _buttonNameKeys = null; });
+function getButtonNameKeys(): string[] {
+  if (!_buttonNameKeys) {
+    _buttonNameKeys = keysWithPrefix("jinryuujrmcore.");
+  }
+  return _buttonNameKeys;
+}
 
 interface RewardEditorProps {
   rewards: string[];
   onChange: (rewards: string[]) => void;
   missionId: number;
   translated?: boolean;
+  showHints?: boolean;
 }
 
-export function RewardEditor({ rewards, onChange, missionId, translated }: RewardEditorProps) {
+export function RewardEditor({ rewards, onChange, missionId, translated, showHints = true }: RewardEditorProps) {
+  const { t } = useTranslation();
   const [showPresets, setShowPresets] = useState(false);
 
   function updateReward(index: number, raw: string) {
@@ -39,10 +52,10 @@ export function RewardEditor({ rewards, onChange, missionId, translated }: Rewar
   return (
     <div className="editor-section">
       <div className="editor-section-header">
-        <span>Rewards</span>
+        <span>{t("rewards.title")}</span>
         <div style={{ display: "flex", gap: 4 }}>
-          <button className="small" onClick={() => setShowPresets(true)}>Presets</button>
-          <button className="small" onClick={addReward}>+ Add Choice</button>
+          <button className="small" onClick={() => setShowPresets(true)}>{t("rewards.presets")}</button>
+          <button className="small" onClick={addReward}>{t("rewards.addChoice")}</button>
         </div>
       </div>
       <div className="card-list">
@@ -52,6 +65,7 @@ export function RewardEditor({ rewards, onChange, missionId, translated }: Rewar
             index={i}
             raw={raw}
             translated={translated}
+            showHints={showHints}
             onChange={(updated) => updateReward(i, updated)}
             onRemove={() => removeReward(i)}
             canRemove={rewards.length > 1}
@@ -74,12 +88,14 @@ interface RewardCardProps {
   index: number;
   raw: string;
   translated?: boolean;
+  showHints?: boolean;
   onChange: (raw: string) => void;
   onRemove: () => void;
   canRemove: boolean;
 }
 
-function RewardCard({ index, raw, translated, onChange, onRemove, canRemove }: RewardCardProps) {
+function RewardCard({ index, raw, translated, showHints = true, onChange, onRemove, canRemove }: RewardCardProps) {
+  const { t } = useTranslation();
   const reward = parseReward(raw);
 
   function updateAndSerialize(updated: RewardChoice) {
@@ -119,7 +135,7 @@ function RewardCard({ index, raw, translated, onChange, onRemove, canRemove }: R
     <div className="card">
       <div className="card-header">
         <div className="card-header-left">
-          <span className="card-index">Choice #{index + 1}</span>
+          <span className="card-index">{t("rewards.choice")} #{index + 1}</span>
         </div>
         <div className="card-actions">
           {canRemove && <button className="small danger" onClick={onRemove}>x</button>}
@@ -128,21 +144,22 @@ function RewardCard({ index, raw, translated, onChange, onRemove, canRemove }: R
 
       <div className="field-grid" style={{ marginBottom: 10 }}>
         <div className="field-group">
-          <label className="field-label">Button Name</label>
-          <input
+          <label className="field-label">{t("rewards.buttonName")}</label>
+          <Autocomplete
             value={reward.buttonName}
-            onChange={(e) => updateMeta("buttonName", e.target.value)}
-            placeholder="Translation key or display name"
+            onChange={(v) => updateMeta("buttonName", v)}
+            suggestions={getButtonNameKeys()}
+            placeholder={t("rewards.buttonPlaceholder")}
           />
-          {buttonHint !== undefined && (
+          {showHints && buttonHint !== undefined && (
             <span className="translation-hint resolved">{buttonHint}</span>
           )}
-          {reward.buttonName && buttonHint === undefined && translated && (
-            <span className="translation-hint unresolved">No translation for "{reward.buttonName}"</span>
+          {showHints && reward.buttonName && buttonHint === undefined && translated && (
+            <span className="translation-hint unresolved">{t("rewards.noTranslation", { value: reward.buttonName })}</span>
           )}
         </div>
         <div className="field-group">
-          <label className="field-label">Next Mission ID</label>
+          <label className="field-label">{t("rewards.nextMissionId")}</label>
           <input
             type="number"
             value={reward.nextMissionId}
@@ -152,8 +169,8 @@ function RewardCard({ index, raw, translated, onChange, onRemove, canRemove }: R
       </div>
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-        <span className="field-label">Components</span>
-        <button className="small" onClick={addComponent}>+ Add</button>
+        <span className="field-label">{t("rewards.components")}</span>
+        <button className="small" onClick={addComponent}>{t("rewards.addComponent")}</button>
       </div>
 
       {reward.components.map((comp, ci) => (
@@ -177,6 +194,8 @@ interface RewardComponentRowProps {
 }
 
 function RewardComponentRow({ component, onChange, onRemove, canRemove }: RewardComponentRowProps) {
+  const { t } = useTranslation();
+
   function updateType(type: RewardType) {
     const defaults: Record<RewardType, Partial<RewardComponent>> = {
       nothing: { value: "" },
@@ -196,8 +215,8 @@ function RewardComponentRow({ component, onChange, onRemove, canRemove }: Reward
           onChange={(e) => updateType(e.target.value as RewardType)}
           style={{ width: "100%" }}
         >
-          {REWARD_TYPES.map((t) => (
-            <option key={t} value={t}>{REWARD_TYPE_LABELS[t]}</option>
+          {REWARD_TYPES.map((rt) => (
+            <option key={rt} value={rt}>{REWARD_TYPE_LABELS[rt]}</option>
           ))}
         </select>
       </div>
@@ -219,7 +238,7 @@ function RewardComponentRow({ component, onChange, onRemove, canRemove }: Reward
             <input
               value={component.value}
               onChange={(e) => onChange({ ...component, value: e.target.value })}
-              placeholder="Amount or multiplier"
+              placeholder={t("reward.tpPlaceholder")}
             />
           </div>
         </>
@@ -230,7 +249,7 @@ function RewardComponentRow({ component, onChange, onRemove, canRemove }: Reward
           <input
             value={component.value}
             onChange={(e) => onChange({ ...component, value: e.target.value })}
-            placeholder="+10, -10, or 0 (auto-balance)"
+            placeholder={t("reward.alignPlaceholder")}
           />
         </div>
       )}
@@ -241,7 +260,7 @@ function RewardComponentRow({ component, onChange, onRemove, canRemove }: Reward
             value={component.value}
             onChange={(v) => onChange({ ...component, value: v })}
             suggestions={ALL_ITEMS}
-            placeholder="mod:itemname::metadata,count"
+            placeholder={t("reward.itemPlaceholder")}
             valueSeparator=","
           />
         </div>
@@ -252,7 +271,7 @@ function RewardComponentRow({ component, onChange, onRemove, canRemove }: Reward
           <input
             value={component.value}
             onChange={(e) => onChange({ ...component, value: e.target.value })}
-            placeholder="Command (@p for player name)"
+            placeholder={t("reward.comPlaceholder")}
           />
         </div>
       )}

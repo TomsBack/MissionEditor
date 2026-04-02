@@ -1,21 +1,46 @@
 const SETTINGS_KEY = "mission-editor-settings";
 
 export interface EditorSettings {
+  // Appearance
+  theme: "dark" | "light";
+  fontSize: number; // px, for editor content
+  compactMode: boolean;
+
+  // Language
+  language: string;
+  showTranslationHints: boolean;
+  resolveTranslatedTitles: boolean;
+
+  // Auto-save
   autoSaveEnabled: boolean;
   autoSaveInterval: number; // seconds
-  jsonIndent: number;
+
+  // New mission defaults
   defaultTranslated: boolean;
   defaultAlignment: "good" | "neutral" | "evil";
+
+  // Editor
   showAdvancedObjectiveFields: boolean;
+  showMissionIds: boolean;
+  confirmBeforeDelete: boolean;
+  jsonIndent: number;
 }
 
 const DEFAULTS: EditorSettings = {
+  theme: "dark",
+  fontSize: 13,
+  compactMode: false,
+  language: "en_US",
+  showTranslationHints: true,
+  resolveTranslatedTitles: true,
   autoSaveEnabled: true,
   autoSaveInterval: 30,
-  jsonIndent: 2,
   defaultTranslated: false,
   defaultAlignment: "neutral",
   showAdvancedObjectiveFields: false,
+  showMissionIds: true,
+  confirmBeforeDelete: true,
+  jsonIndent: 2,
 };
 
 export function loadSettings(): EditorSettings {

@@ -1,4 +1,5 @@
 import type { ValidationWarning } from "../utils/validation";
+import { useTranslation } from "react-i18next";
 
 interface ValidationPanelProps {
   warnings: ValidationWarning[];
@@ -6,10 +7,12 @@ interface ValidationPanelProps {
 }
 
 export function ValidationPanel({ warnings, onNavigate }: ValidationPanelProps) {
+  const { t } = useTranslation();
+
   if (warnings.length === 0) {
     return (
       <div className="validation-panel">
-        <div className="validation-empty">No issues found</div>
+        <div className="validation-empty">{t("validation.noIssues")}</div>
       </div>
     );
   }
@@ -20,14 +23,14 @@ export function ValidationPanel({ warnings, onNavigate }: ValidationPanelProps) 
   return (
     <div className="validation-panel">
       <div className="validation-summary">
-        {errors.length > 0 && <span className="validation-count error">{errors.length} error{errors.length !== 1 ? "s" : ""}</span>}
-        {warns.length > 0 && <span className="validation-count warning">{warns.length} warning{warns.length !== 1 ? "s" : ""}</span>}
+        {errors.length > 0 && <span className="validation-count error">{errors.length} {errors.length !== 1 ? t("validation.errors") : t("validation.error")}</span>}
+        {warns.length > 0 && <span className="validation-count warning">{warns.length} {warns.length !== 1 ? t("validation.warnings") : t("validation.warning")}</span>}
       </div>
       {warnings.map((w, i) => (
         <div
           key={i}
-          className="validation-item"
-          onClick={() => onNavigate(w.missionIndex)}
+          className={`validation-item${w.missionIndex >= 0 ? " clickable" : ""}`}
+          onClick={() => w.missionIndex >= 0 && onNavigate(w.missionIndex)}
         >
           <span className={`validation-icon ${w.level}`}>
             {w.level === "error" ? "\u2716" : "\u26A0"}

@@ -208,15 +208,8 @@ function validateBundleInner(bundle: MissionBundle): ValidationWarning[] {
           }
         }
 
-        // Item objective: validate name contains a colon (mod:item format)
-        if (obj.type === "item" && obj.name && !obj.name.includes(":")) {
-          warnings.push({
-            level: "warning",
-            missionIndex: mi,
-            missionId: mission.id,
-            message: `Objective #${oi}${variantLabel}: item name "${obj.name}" should be in mod:item format`,
-          });
-        }
+        // Item objective: items without a modid: prefix auto-resolve to minecraft:
+        // No warning needed for this case
       }
 
       // Validate rewards

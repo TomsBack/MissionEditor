@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import "./App.css";
 import type { MissionBundle, Mission } from "./types/mission";
 import {
@@ -9,8 +9,13 @@ import {
 } from "./utils/files";
 import { useHistory } from "./utils/history";
 import { validateBundle, type ValidationWarning } from "./utils/validation";
-import { getStoredTheme, setStoredTheme, applyTheme, type Theme } from "./utils/theme";
+import { applyTheme } from "./utils/theme";
 import { loadSettings, saveSettings, type EditorSettings } from "./utils/settings";
+import { loadLanguage, onLanguageChange } from "./utils/translations";
+import { useTranslation } from "react-i18next";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { confirm as tauriConfirm } from "@tauri-apps/plugin-dialog";
+import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from "react-resizable-panels";
 import { Sidebar } from "./components/Sidebar";
 import { BundleEditor } from "./components/BundleEditor";
 import { MissionEditor } from "./components/MissionEditor";
@@ -19,6 +24,10 @@ import { FlowGraph } from "./components/FlowGraph";
 import { ExportPreview } from "./components/ExportPreview";
 import { TemplateDialog } from "./components/TemplateDialog";
 import { SettingsDialog } from "./components/SettingsDialog";
+import {
+  IconNew, IconOpen, IconImport, IconSave, IconSaveAs, IconPreview,
+  IconUndo, IconRedo, IconSettings, IconRecent,
+} from "./components/Icons";
 
 interface LoadedBundle {
   bundle: MissionBundle;
@@ -28,54 +37,90 @@ interface LoadedBundle {
 }
 
 type BottomTab = "validation" | "flow" | null;
+type ToastMessage = { text: string; type: "error" | "success" };
 
 function App() {
-  const [bundles, setBundles] = useState<LoadedBundle[]>([]);
+  const { t, i18n } = useTranslation();
+
+  // Undo/redo owns the bundle state (single source of truth)
+  const {
+    state: bundles,
+    set: setBundles,
+    undo,
+    redo,
+    reset: resetBundles,
+    canUndo,
+    canRedo,
+  } = useHistory<LoadedBundle[]>([]);
+
   const [selectedBundle, setSelectedBundle] = useState(0);
   const [selectedMission, setSelectedMission] = useState(0);
   const [bottomTab, setBottomTab] = useState<BottomTab>(null);
   const [showExport, setShowExport] = useState(false);
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [theme, setThemeState] = useState<Theme>(getStoredTheme());
+  const [toast, setToast] = useState<ToastMessage | null>(null);
   const [recentFiles, setRecentFiles] = useState<string[]>(getRecentFiles());
   const [settings, setSettingsState] = useState<EditorSettings>(loadSettings);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Undo/redo for bundle state
-  const {
-    state: undoState,
-    set: pushUndoState,
-    undo,
-    redo,
-    reset: resetUndo,
-    canUndo,
-    canRedo,
-  } = useHistory<LoadedBundle[]>([]);
+  // Keep a ref for use in the window close handler
+  const bundlesRef = useRef(bundles);
+  bundlesRef.current = bundles;
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
 
-  // Sync undo state to bundles (only when undo/redo navigates)
-  const undoStateRef = useRef(undoState);
-  useEffect(() => {
-    if (undoState !== undoStateRef.current) {
-      undoStateRef.current = undoState;
-      if (undoState.length > 0) {
-        setBundles(undoState);
-      }
+  function showToast(text: string, type: "error" | "success" = "error") {
+    setToast({ text, type });
+    if (toastTimer.current !== null) clearTimeout(toastTimer.current);
+    if (type === "success") {
+      toastTimer.current = setTimeout(() => setToast(null), 3000);
+    } else {
+      toastTimer.current = setTimeout(() => setToast(null), 8000);
     }
-  }, [undoState]);
-
-  // Apply theme on mount
-  useEffect(() => {
-    applyTheme(theme);
-  }, [theme]);
-
-  function toggleTheme() {
-    const next = theme === "dark" ? "light" : "dark";
-    setThemeState(next);
-    setStoredTheme(next);
-    applyTheme(next);
   }
 
+  // Force re-render when mod translations load/change
+  const [, setTranslationVersion] = useState(0);
+
+  useEffect(() => {
+    loadLanguage(settings.language);
+    return onLanguageChange(() => setTranslationVersion((v) => v + 1));
+  }, []);
+
+  // Apply appearance settings
+  useEffect(() => {
+    applyTheme(settings.theme);
+    document.documentElement.style.setProperty("--app-font-size", `${settings.fontSize}px`);
+    document.documentElement.classList.toggle("compact", settings.compactMode);
+  }, [settings.theme, settings.fontSize, settings.compactMode]);
+
+  // Warn before closing with unsaved changes
+  const closingRef = useRef(false);
+  useEffect(() => {
+    const unlisten = getCurrentWindow().onCloseRequested(async (event) => {
+      if (closingRef.current) return;
+      const hasDirty = bundlesRef.current.some((b) => b.dirty);
+      if (hasDirty) {
+        event.preventDefault();
+        const confirmed = await tauriConfirm(t("confirm.unsavedChanges"), {
+          title: t("confirm.closeBundleTitle"),
+          kind: "warning",
+        });
+        if (confirmed) {
+          closingRef.current = true;
+          await getCurrentWindow().destroy();
+        }
+      }
+    });
+    return () => { unlisten.then((fn) => fn()); };
+  }, []);
+
   function updateSettings(updated: EditorSettings) {
+    if (updated.language !== settings.language) {
+      i18n.changeLanguage(updated.language);
+      loadLanguage(updated.language);
+    }
     setSettingsState(updated);
     saveSettings(updated);
   }
@@ -103,8 +148,7 @@ function App() {
         dirty: true,
         originalJson: undefined,
       }));
-      setBundles(recovered);
-      resetUndo(recovered);
+      resetBundles(recovered);
     }
   }, []);
 
@@ -129,32 +173,30 @@ function App() {
     return dupes;
   }, [current?.bundle]);
 
-  function setBundlesWithUndo(updater: (prev: LoadedBundle[]) => LoadedBundle[], immediate = false) {
-    setBundles((prev) => {
-      const next = updater(prev);
-      pushUndoState(next, immediate);
-      return next;
-    });
+  /** Helper: apply an updater to the bundle list. `immediate` skips debouncing. */
+  function updateBundles(updater: (prev: LoadedBundle[]) => LoadedBundle[], immediate = false) {
+    setBundles(updater(bundles), immediate);
   }
 
   const updateBundle = useCallback((updated: MissionBundle) => {
-    setBundlesWithUndo((prev) => {
-      const next = [...prev];
-      next[selectedBundle] = { ...next[selectedBundle], bundle: updated, dirty: true };
-      return next;
-    });
-  }, [selectedBundle]);
+    const next = [...bundles];
+    next[selectedBundle] = { ...next[selectedBundle], bundle: updated, dirty: true };
+    setBundles(next);
+  }, [bundles, selectedBundle]);
 
   const updateMission = useCallback((updated: Mission) => {
-    setBundlesWithUndo((prev) => {
-      const next = [...prev];
-      const bundle = { ...next[selectedBundle].bundle };
-      bundle.missions = [...bundle.missions];
-      bundle.missions[selectedMission] = updated;
-      next[selectedBundle] = { ...next[selectedBundle], bundle, dirty: true };
-      return next;
-    });
-  }, [selectedBundle, selectedMission]);
+    const next = [...bundles];
+    const bundle = { ...next[selectedBundle].bundle };
+    bundle.missions = [...bundle.missions];
+    bundle.missions[selectedMission] = updated;
+    next[selectedBundle] = { ...next[selectedBundle], bundle, dirty: true };
+    setBundles(next);
+  }, [bundles, selectedBundle, selectedMission]);
+
+  const missionDefaults = useMemo(() => ({
+    translated: settings.defaultTranslated,
+    alignment: settings.defaultAlignment,
+  }), [settings.defaultTranslated, settings.defaultAlignment]);
 
   // #region File Operations
 
@@ -166,16 +208,14 @@ function App() {
         bundle: result.bundle,
         path: result.path,
         dirty: false,
-        originalJson: JSON.stringify(result.bundle, null, 2),
+        originalJson: JSON.stringify(result.bundle, null, settings.jsonIndent),
       };
-      setBundlesWithUndo((prev) => {
-        setSelectedBundle(prev.length);
-        return [...prev, entry];
-      }, true);
+      setSelectedBundle(bundles.length);
+      updateBundles((prev) => [...prev, entry], true);
       setSelectedMission(0);
       setRecentFiles(getRecentFiles());
     } catch (err) {
-      console.error("Failed to open file:", err);
+      showToast(err instanceof Error ? err.message : String(err), "error");
     }
   }
 
@@ -186,16 +226,14 @@ function App() {
         bundle: result.bundle,
         path: result.path,
         dirty: false,
-        originalJson: JSON.stringify(result.bundle, null, 2),
+        originalJson: JSON.stringify(result.bundle, null, settings.jsonIndent),
       };
-      setBundlesWithUndo((prev) => {
-        setSelectedBundle(prev.length);
-        return [...prev, entry];
-      }, true);
+      setSelectedBundle(bundles.length);
+      updateBundles((prev) => [...prev, entry], true);
       setSelectedMission(0);
       setRecentFiles(getRecentFiles());
     } catch (err) {
-      console.error("Failed to open recent file:", err);
+      showToast(err instanceof Error ? err.message : String(err), "error");
     }
   }
 
@@ -207,68 +245,73 @@ function App() {
         bundle: r.bundle,
         path: r.path,
         dirty: false,
-        originalJson: JSON.stringify(r.bundle, null, 2),
+        originalJson: JSON.stringify(r.bundle, null, settings.jsonIndent),
       }));
-      setBundlesWithUndo((prev) => {
-        setSelectedBundle(prev.length);
-        return [...prev, ...entries];
-      }, true);
+      setSelectedBundle(bundles.length);
+      updateBundles((prev) => [...prev, ...entries], true);
       setSelectedMission(0);
     } catch (err) {
-      console.error("Failed to import:", err);
+      showToast(err instanceof Error ? err.message : String(err), "error");
     }
   }
 
   function handleNew() {
-    setBundlesWithUndo((prev) => {
-      setSelectedBundle(prev.length);
-      return [...prev, { bundle: createEmptyBundle(), dirty: true }];
-    }, true);
+    setSelectedBundle(bundles.length);
+    updateBundles((prev) => [...prev, { bundle: createEmptyBundle(), dirty: true }], true);
     setSelectedMission(0);
   }
 
   async function handleSave() {
     if (!current) return;
     try {
-      const path = await saveBundleFile(current.bundle, current.path);
+      const path = await saveBundleFile(current.bundle, current.path, settings.jsonIndent);
       if (path) {
-        const json = JSON.stringify(current.bundle, null, 2);
-        setBundles((prev) => {
-          const next = [...prev];
-          next[selectedBundle] = { ...next[selectedBundle], path, dirty: false, originalJson: json };
-          return next;
-        });
+        const json = JSON.stringify(current.bundle, null, settings.jsonIndent);
+        const next = [...bundles];
+        next[selectedBundle] = { ...next[selectedBundle], path, dirty: false, originalJson: json };
+        setBundles(next, true);
         clearAutoSaveData();
         setRecentFiles(getRecentFiles());
+        showToast(t("toast.saved", { path: path.split(/[/\\]/).pop() }), "success");
       }
     } catch (err) {
-      console.error("Failed to save file:", err);
+      showToast(err instanceof Error ? err.message : String(err), "error");
     }
   }
 
   async function handleSaveAs() {
     if (!current) return;
     try {
-      const path = await saveBundleFileAs(current.bundle);
+      const path = await saveBundleFileAs(current.bundle, settings.jsonIndent);
       if (path) {
-        const json = JSON.stringify(current.bundle, null, 2);
-        setBundles((prev) => {
-          const next = [...prev];
-          next[selectedBundle] = { ...next[selectedBundle], path, dirty: false, originalJson: json };
-          return next;
-        });
+        const json = JSON.stringify(current.bundle, null, settings.jsonIndent);
+        const next = [...bundles];
+        next[selectedBundle] = { ...next[selectedBundle], path, dirty: false, originalJson: json };
+        setBundles(next, true);
         setRecentFiles(getRecentFiles());
+        showToast(t("toast.saved", { path: path.split(/[/\\]/).pop() }), "success");
       }
     } catch (err) {
-      console.error("Failed to save file:", err);
+      showToast(err instanceof Error ? err.message : String(err), "error");
     }
   }
 
-  function handleCloseBundle() {
-    if (!current) return;
-    setBundlesWithUndo((prev) => prev.filter((_, i) => i !== selectedBundle), true);
-    setSelectedBundle(Math.max(0, selectedBundle - 1));
-    setSelectedMission(0);
+  function handleCloseBundle(index?: number) {
+    const idx = index ?? selectedBundle;
+    if (!bundles[idx]) return;
+
+    if (bundles[idx].dirty) {
+      if (!window.confirm(t("confirm.closeBundle"))) return;
+    }
+
+    const remaining = bundles.length - 1;
+    updateBundles((prev) => prev.filter((_, i) => i !== idx), true);
+    if (idx < selectedBundle) {
+      setSelectedBundle(selectedBundle - 1);
+    } else if (idx === selectedBundle) {
+      setSelectedBundle(Math.min(idx, remaining - 1));
+      setSelectedMission(0);
+    }
   }
 
   // #endregion
@@ -278,7 +321,7 @@ function App() {
   function handleAddMission() {
     if (!current) return;
     const maxId = current.bundle.missions.reduce((max, m) => Math.max(max, m.id), -1);
-    const newMission = createEmptyMission(maxId + 1);
+    const newMission = createEmptyMission(maxId + 1, missionDefaults);
     const updated = { ...current.bundle, missions: [...current.bundle.missions, newMission] };
     updateBundle(updated);
     setSelectedMission(updated.missions.length - 1);
@@ -293,6 +336,10 @@ function App() {
 
   function handleDeleteMission(index: number) {
     if (!current) return;
+    if (settings.confirmBeforeDelete) {
+      const m = current.bundle.missions[index];
+      if (!window.confirm(t("confirm.deleteMission", { id: m?.id ?? index }))) return;
+    }
     const updated = {
       ...current.bundle,
       missions: current.bundle.missions.filter((_, i) => i !== index),
@@ -301,6 +348,21 @@ function App() {
     if (selectedMission >= updated.missions.length) {
       setSelectedMission(Math.max(0, updated.missions.length - 1));
     }
+  }
+
+  function handleDuplicateMission(index: number) {
+    if (!current) return;
+    const source = current.bundle.missions[index];
+    if (!source) return;
+    const maxId = current.bundle.missions.reduce((max, m) => Math.max(max, m.id), -1);
+    const duplicate: Mission = {
+      ...structuredClone(source),
+      id: maxId + 1,
+    };
+    const missions = [...current.bundle.missions];
+    missions.splice(index + 1, 0, duplicate);
+    updateBundle({ ...current.bundle, missions });
+    setSelectedMission(index + 1);
   }
 
   function handleMoveMission(fromIndex: number, toIndex: number) {
@@ -312,15 +374,26 @@ function App() {
     setSelectedMission(toIndex);
   }
 
+  const handleAddMissionFromGraph = useCallback((): Mission | undefined => {
+    if (!current) return undefined;
+    const maxId = current.bundle.missions.reduce((max, m) => Math.max(max, m.id), -1);
+    const newMission = createEmptyMission(maxId + 1, {
+      translated: settingsRef.current.defaultTranslated,
+      alignment: settingsRef.current.defaultAlignment,
+    });
+    const updated = { ...current.bundle, missions: [...current.bundle.missions, newMission] };
+    updateBundle(updated);
+    setSelectedMission(updated.missions.length - 1);
+    return newMission;
+  }, [current, updateBundle]);
+
   function handleCopyMission(mission: Mission, targetBundleIndex: number) {
-    setBundlesWithUndo((prev) => {
-      const next = [...prev];
-      const target = { ...next[targetBundleIndex] };
-      target.bundle = { ...target.bundle, missions: [...target.bundle.missions, { ...mission }] };
-      target.dirty = true;
-      next[targetBundleIndex] = target;
-      return next;
-    }, true);
+    const next = [...bundles];
+    const target = { ...next[targetBundleIndex] };
+    target.bundle = { ...target.bundle, missions: [...target.bundle.missions, { ...mission }] };
+    target.dirty = true;
+    next[targetBundleIndex] = target;
+    setBundles(next, true);
   }
 
   function handleSelectBundle(index: number) {
@@ -352,6 +425,9 @@ function App() {
       } else if (ctrl && e.key === "o") {
         e.preventDefault();
         handleOpen();
+      } else if (ctrl && e.key === "w") {
+        e.preventDefault();
+        handleCloseBundle();
       } else if (e.key === "Delete" && e.target === document.body) {
         if (current && selectedMission >= 0) {
           handleDeleteMission(selectedMission);
@@ -361,7 +437,7 @@ function App() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [current, selectedMission, selectedBundle]);
+  }, [current, selectedMission, selectedBundle, settings.confirmBeforeDelete]);
 
   // #endregion
 
@@ -375,30 +451,28 @@ function App() {
       {/* Toolbar */}
       <div className="toolbar">
         <span className="toolbar-title">
-          Mission Editor
+          {t("app.title")}
           {current?.path && <span className="toolbar-path">{current.path}</span>}
           {current?.dirty && <span style={{ color: "var(--warning)", marginLeft: 6 }}>*</span>}
         </span>
-        <button onClick={handleNew} title="Ctrl+N">New</button>
-        <button onClick={handleOpen} title="Ctrl+O">Open</button>
-        <button onClick={handleImport} title="Import from game folder">Import</button>
+        <button onClick={handleNew} title="Ctrl+N"><IconNew size={14} />{t("toolbar.new")}</button>
+        <button onClick={handleOpen} title="Ctrl+O"><IconOpen size={14} />{t("toolbar.open")}</button>
+        <button onClick={handleImport} title={t("toolbar.importTooltip")}><IconImport size={14} />{t("toolbar.import")}</button>
         <button onClick={handleSave} disabled={!current} className={current ? "primary" : ""} title="Ctrl+S">
-          Save
+          <IconSave size={14} />{t("toolbar.save")}
         </button>
-        <button onClick={handleSaveAs} disabled={!current} title="Ctrl+Shift+S">Save As</button>
-        <button onClick={() => setShowExport(true)} disabled={!current}>Preview</button>
+        <button onClick={handleSaveAs} disabled={!current} title="Ctrl+Shift+S"><IconSaveAs size={14} />{t("toolbar.saveAs")}</button>
+        <button onClick={() => setShowExport(true)} disabled={!current}><IconPreview size={14} />{t("toolbar.preview")}</button>
         <span className="toolbar-sep" />
-        <button onClick={undo} disabled={!canUndo} title="Ctrl+Z">Undo</button>
-        <button onClick={redo} disabled={!canRedo} title="Ctrl+Y">Redo</button>
+        <button onClick={undo} disabled={!canUndo} title="Ctrl+Z"><IconUndo size={14} />{t("toolbar.undo")}</button>
+        <button onClick={redo} disabled={!canRedo} title="Ctrl+Y"><IconRedo size={14} />{t("toolbar.redo")}</button>
         <span className="toolbar-sep" />
-        <button onClick={toggleTheme} title="Toggle theme">{theme === "dark" ? "Light" : "Dark"}</button>
-        <button onClick={() => setShowSettings(true)} title="Settings">Settings</button>
-        <button onClick={handleCloseBundle} disabled={!current} className="danger">Close</button>
+        <button onClick={() => setShowSettings(true)} title={t("toolbar.settings")}><IconSettings size={14} />{t("toolbar.settings")}</button>
 
         {/* Recent files dropdown */}
         {recentFiles.length > 0 && (
           <div className="recent-dropdown">
-            <button className="small">Recent</button>
+            <button className="small"><IconRecent size={14} />{t("toolbar.recent")}</button>
             <div className="recent-menu">
               {recentFiles.map((path, i) => (
                 <div key={i} className="recent-item" onClick={() => handleOpenRecent(path)}>
@@ -412,82 +486,107 @@ function App() {
       </div>
 
       {/* Main Content */}
-      <div className="main-layout">
-        <Sidebar
-          bundles={bundleList}
-          selectedBundle={selectedBundle}
-          selectedMission={selectedMission}
-          duplicateIds={duplicateIds}
-          onSelectBundle={handleSelectBundle}
-          onSelectMission={setSelectedMission}
-          onAddMission={handleAddMission}
-          onAddFromTemplate={() => setShowTemplateDialog(true)}
-          onDeleteMission={handleDeleteMission}
-          onMoveMission={handleMoveMission}
-          onCopyMission={handleCopyMission}
-        />
-
-        <div className="editor-area">
+      <PanelGroup orientation="horizontal" className="main-layout">
+        <Panel defaultSize={30} minSize="200px" maxSize="800px" className="sidebar-panel">
+          <Sidebar
+            bundles={bundleList}
+            selectedBundle={selectedBundle}
+            selectedMission={selectedMission}
+            duplicateIds={duplicateIds}
+            dirtyBundles={bundles.map((b) => b.dirty)}
+            resolveTranslatedTitles={settings.resolveTranslatedTitles}
+            showMissionIds={settings.showMissionIds}
+            onSelectBundle={handleSelectBundle}
+            onSelectMission={setSelectedMission}
+            onAddMission={handleAddMission}
+            onAddFromTemplate={() => setShowTemplateDialog(true)}
+            onCloseBundle={handleCloseBundle}
+            onDeleteMission={handleDeleteMission}
+            onMoveMission={handleMoveMission}
+            onCopyMission={handleCopyMission}
+            onDuplicateMission={handleDuplicateMission}
+          />
+        </Panel>
+        <PanelResizeHandle className="resize-handle resize-handle-horizontal" />
+        <Panel minSize="300px">
           {current ? (
-            <div className="editor-panel">
-              <BundleEditor bundle={current.bundle} onChange={updateBundle} />
-              {mission ? (
-                <MissionEditor mission={mission} onChange={updateMission} />
-              ) : (
-                <div className="editor-empty">
-                  Select a mission from the sidebar or add a new one.
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="editor-panel">
-              <div className="editor-empty">
-                Open a mission bundle JSON file or create a new one to get started.
-              </div>
-            </div>
-          )}
-
-          {/* Bottom Panel */}
-          {current && (
-            <div className="bottom-bar">
+            <div className="editor-area">
+              <PanelGroup orientation="vertical" className="editor-panels" id="editor-vertical">
+                <Panel id="editor-main" minSize="200px">
+                  <div className="editor-panel">
+                    <BundleEditor bundle={current.bundle} onChange={updateBundle} />
+                    {mission ? (
+                      <MissionEditor
+                        mission={mission}
+                        onChange={updateMission}
+                        showHints={settings.showTranslationHints}
+                        showAdvancedFields={settings.showAdvancedObjectiveFields}
+                      />
+                    ) : (
+                      <div className="editor-empty">
+                        {t("empty.noMission")}
+                      </div>
+                    )}
+                  </div>
+                </Panel>
+                {bottomTab && (
+                  <>
+                    <PanelResizeHandle className="resize-handle resize-handle-vertical" />
+                    <Panel id="bottom-panel" defaultSize={45} minSize="100px" maxSize="800px">
+                      <div className="bottom-content">
+                        {bottomTab === "validation" && (
+                          <ValidationPanel
+                            warnings={warnings}
+                            onNavigate={(mi) => setSelectedMission(mi)}
+                          />
+                        )}
+                        {bottomTab === "flow" && (
+                          <FlowGraph
+                            bundle={current.bundle}
+                            selectedMission={selectedMission}
+                            onSelectMission={setSelectedMission}
+                            onUpdateBundle={updateBundle}
+                            onAddMission={handleAddMissionFromGraph}
+                            onDeleteMission={handleDeleteMission}
+                            resolveTranslatedTitles={settings.resolveTranslatedTitles}
+                          />
+                        )}
+                      </div>
+                    </Panel>
+                  </>
+                )}
+              </PanelGroup>
               <div className="bottom-tabs">
                 <button
                   className={`small ${bottomTab === "validation" ? "primary" : ""}`}
                   onClick={() => setBottomTab(bottomTab === "validation" ? null : "validation")}
                 >
-                  Issues {warnings.length > 0 && `(${warnings.length})`}
+                  {t("tab.issues")} {warnings.length > 0 && `(${warnings.length})`}
                 </button>
                 <button
                   className={`small ${bottomTab === "flow" ? "primary" : ""}`}
                   onClick={() => setBottomTab(bottomTab === "flow" ? null : "flow")}
                 >
-                  Flow Graph
+                  {t("tab.flowGraph")}
                 </button>
               </div>
-
-              {bottomTab === "validation" && (
-                <ValidationPanel
-                  warnings={warnings}
-                  onNavigate={(mi) => setSelectedMission(mi)}
-                />
-              )}
-              {bottomTab === "flow" && (
-                <FlowGraph
-                  bundle={current.bundle}
-                  selectedMission={selectedMission}
-                  onSelectMission={setSelectedMission}
-                />
-              )}
+            </div>
+          ) : (
+            <div className="editor-panel editor-panel-empty">
+              <div className="editor-empty">
+                {t("empty.noBundle")}
+              </div>
             </div>
           )}
-        </div>
-      </div>
+        </Panel>
+      </PanelGroup>
 
       {/* Modals */}
       {showExport && current && (
         <ExportPreview
           bundle={current.bundle}
           originalJson={current.originalJson}
+          jsonIndent={settings.jsonIndent}
           onClose={() => setShowExport(false)}
         />
       )}
@@ -504,6 +603,12 @@ function App() {
           onChange={updateSettings}
           onClose={() => setShowSettings(false)}
         />
+      )}
+      {toast && (
+        <div className={`toast toast-${toast.type}`}>
+          <span>{toast.text}</span>
+          <button className="small" onClick={() => setToast(null)}>&times;</button>
+        </div>
       )}
     </div>
   );
