@@ -10,6 +10,8 @@ import {
 import { ALL_ENTITIES, ALL_ITEMS } from "../utils/registry";
 import { DBC_TRANSFORMATIONS, MC_SOUNDS } from "../utils/suggestions";
 import { translate, entityDisplayName, itemDisplayName, keysWithPrefix, onLanguageChange } from "../utils/translations";
+import { formatNumber } from "../utils/formatNumber";
+import { computePowerLevel, type PLConfig } from "../utils/powerLevel";
 import { Autocomplete } from "./Autocomplete";
 
 /** Fields considered "advanced" - hidden unless showAdvancedFields is true. */
@@ -24,9 +26,10 @@ interface ObjectiveEditorProps {
   translated?: boolean;
   showHints?: boolean;
   showAdvancedFields?: boolean;
+  plConfig?: PLConfig | null;
 }
 
-export function ObjectiveEditor({ objectives, onChange, translated, showHints = true, showAdvancedFields = true }: ObjectiveEditorProps) {
+export function ObjectiveEditor({ objectives, onChange, translated, showHints = true, showAdvancedFields = true, plConfig }: ObjectiveEditorProps) {
   const { t } = useTranslation();
 
   function updateObjective(index: number, raw: string) {
@@ -69,6 +72,7 @@ export function ObjectiveEditor({ objectives, onChange, translated, showHints = 
             translated={translated}
             showHints={showHints}
             showAdvancedFields={showAdvancedFields}
+            plConfig={plConfig}
             onChange={(updated) => updateObjective(i, updated)}
             onRemove={() => removeObjective(i)}
             onMoveUp={() => moveObjective(i, -1)}
@@ -87,6 +91,7 @@ interface ObjectiveCardProps {
   translated?: boolean;
   showHints?: boolean;
   showAdvancedFields?: boolean;
+  plConfig?: PLConfig | null;
   onChange: (raw: string) => void;
   onRemove: () => void;
   onMoveUp: () => void;
@@ -110,7 +115,7 @@ function getSagaTranslationKeys(): string[] {
   return _sagaKeys;
 }
 
-function ObjectiveCard({ index, raw, isFirst, translated, showHints = true, showAdvancedFields = true, onChange, onRemove, onMoveUp, onMoveDown }: ObjectiveCardProps) {
+function ObjectiveCard({ index, raw, isFirst, translated, showHints = true, showAdvancedFields = true, plConfig, onChange, onRemove, onMoveUp, onMoveDown }: ObjectiveCardProps) {
   const { t } = useTranslation();
   const obj = parseObjective(raw);
   const allFields = FIELDS_BY_TYPE[obj.type] ?? [];
@@ -144,6 +149,14 @@ function ObjectiveCard({ index, raw, isFirst, translated, showHints = true, show
       return translationKeySuggestions;
     }
     return [];
+  }
+
+  function getNumberHint(field: keyof Objective, value: string): string | undefined {
+    if (field !== "health" && field !== "attack") return undefined;
+    if (!value || value.length <= 4) return undefined;
+    const n = Number(value);
+    if (!Number.isFinite(n)) return undefined;
+    return formatNumber(n);
   }
 
   // Get a hint for a field value
@@ -204,6 +217,7 @@ function ObjectiveCard({ index, raw, isFirst, translated, showHints = true, show
             const suggestions = getSuggestions(field);
             const value = obj[field] || "";
             const hint = getHint(field, value);
+            const numberHint = getNumberHint(field, value);
             return (
               <div key={field} className="field-group">
                 <label className="field-label">{FIELD_LABELS[field]}</label>
@@ -230,6 +244,7 @@ function ObjectiveCard({ index, raw, isFirst, translated, showHints = true, show
                     placeholder={FIELD_LABELS[field]}
                   />
                 )}
+                {numberHint && <span className="number-hint">{numberHint}</span>}
                 {showHints && hint && <span className="translation-hint resolved">{hint}</span>}
                 {showHints && !hint && value && (field === "spawnMessage" || field === "deathMessage" || field === "dialog" || field === "button") && (
                   <span className="translation-hint unresolved">{t("objectives.noTranslation", { value })}</span>
@@ -239,6 +254,15 @@ function ObjectiveCard({ index, raw, isFirst, translated, showHints = true, show
           })}
         </div>
       )}
+      {plConfig && (obj.type === "kill" || obj.type === "killsame") && (() => {
+        const pl = computePowerLevel(obj.health, plConfig);
+        if (pl === null) return null;
+        return (
+          <div className="pl-badge">
+            {t("objectives.powerLevel")}: <strong>{formatNumber(pl)}</strong>
+          </div>
+        );
+      })()}
     </div>
   );
 }

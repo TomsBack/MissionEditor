@@ -222,6 +222,44 @@ export function SettingsDialog({ settings, onChange, onClose }: SettingsDialogPr
                   </div>
 
                   <div className="settings-section">
+                    <div className="settings-section-title">{t("settings.powerLevel.title")}</div>
+                    <div className="settings-row">
+                      <label className="settings-label">
+                        <input
+                          type="checkbox"
+                          checked={settings.showPowerLevelHint}
+                          onChange={(e) => update("showPowerLevelHint", e.target.checked)}
+                        />
+                        {t("settings.powerLevel.show")}
+                      </label>
+                    </div>
+                    <div className="settings-row">
+                      <label className="settings-label">{t("settings.powerLevel.conStatInc")}</label>
+                      <NumberInput
+                        min={0.01}
+                        step={0.1}
+                        float
+                        value={settings.plConStatInc}
+                        onChange={(v) => update("plConStatInc", v)}
+                        style={{ width: 80 }}
+                        disabled={!settings.showPowerLevelHint}
+                      />
+                    </div>
+                    <div className="settings-row">
+                      <label className="settings-label">
+                        <input
+                          type="checkbox"
+                          checked={settings.plBPModeSquared}
+                          onChange={(e) => update("plBPModeSquared", e.target.checked)}
+                          disabled={!settings.showPowerLevelHint}
+                        />
+                        {t("settings.powerLevel.bpMode")}
+                      </label>
+                    </div>
+                    <div className="settings-hint">{t("settings.powerLevel.hint")}</div>
+                  </div>
+
+                  <div className="settings-section">
                     <div className="settings-section-title">{t("settings.export")}</div>
                     <div className="settings-row">
                       <label className="settings-label">{t("settings.jsonIndent")}</label>

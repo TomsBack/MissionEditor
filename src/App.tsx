@@ -524,6 +524,9 @@ function App() {
                         onChange={updateMission}
                         showHints={settings.showTranslationHints}
                         showAdvancedFields={settings.showAdvancedObjectiveFields}
+                        plConfig={settings.showPowerLevelHint
+                          ? { conStatInc: settings.plConStatInc, bpModeSquared: settings.plBPModeSquared }
+                          : null}
                       />
                     ) : (
                       <div className="editor-empty">

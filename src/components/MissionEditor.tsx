@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Mission } from "../types/mission";
 import { translate, keysWithPrefix, onLanguageChange } from "../utils/translations";
 import { useTranslation } from "react-i18next";
+import type { PLConfig } from "../utils/powerLevel";
 import { Autocomplete } from "./Autocomplete";
 import { NumberInput } from "./NumberInput";
 import { ObjectiveEditor } from "./ObjectiveEditor";
@@ -12,6 +13,7 @@ interface MissionEditorProps {
   onChange: (mission: Mission) => void;
   showHints?: boolean;
   showAdvancedFields?: boolean;
+  plConfig?: PLConfig | null;
 }
 
 // Invalidate cached key lists when language changes
@@ -58,7 +60,7 @@ function getSubtitleKeys(): string[] {
   return _subtitleKeys;
 }
 
-export function MissionEditor({ mission, onChange, showHints = true, showAdvancedFields = true }: MissionEditorProps) {
+export function MissionEditor({ mission, onChange, showHints = true, showAdvancedFields = true, plConfig }: MissionEditorProps) {
   const { t } = useTranslation();
   const [propIndex, setPropIndex] = useState(0);
 
@@ -260,6 +262,7 @@ export function MissionEditor({ mission, onChange, showHints = true, showAdvance
         translated={mission.translated}
         showHints={showHints}
         showAdvancedFields={showAdvancedFields}
+        plConfig={plConfig}
       />
 
       {/* Rewards */}

@@ -24,6 +24,11 @@ export interface EditorSettings {
   showMissionIds: boolean;
   confirmBeforeDelete: boolean;
   jsonIndent: number;
+
+  // Power level preview
+  showPowerLevelHint: boolean;
+  plConStatInc: number;
+  plBPModeSquared: boolean;
 }
 
 const DEFAULTS: EditorSettings = {
@@ -41,6 +46,9 @@ const DEFAULTS: EditorSettings = {
   showMissionIds: true,
   confirmBeforeDelete: true,
   jsonIndent: 2,
+  showPowerLevelHint: true,
+  plConStatInc: 0.5,
+  plBPModeSquared: true,
 };
 
 export function loadSettings(): EditorSettings {

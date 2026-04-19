@@ -90,6 +90,7 @@ const en = {
   "objectives.moveDown": "Move down",
   "objectives.remove": "Remove",
   "objectives.noTranslation": "No translation for \"{{value}}\"",
+  "objectives.powerLevel": "Est. power level",
 
   // Objective protect options
   "protect.default": "Default (must kill specific)",
@@ -214,6 +215,11 @@ const en = {
   "settings.confirmDelete": "Confirm before deleting missions",
   "settings.export": "Export",
   "settings.jsonIndent": "JSON indent spaces",
+  "settings.powerLevel.title": "Power Level Preview",
+  "settings.powerLevel.show": "Show estimated power level on kill objectives",
+  "settings.powerLevel.conStatInc": "CON stat increase",
+  "settings.powerLevel.bpMode": "Squared BP display mode",
+  "settings.powerLevel.hint": "Match your server's DBC race config (default 0.5 for Saiyan class 0).",
 
   // Settings: Data
   "settings.clearRecent": "Clear Recent Files",
