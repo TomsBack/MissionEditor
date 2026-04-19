@@ -41,6 +41,14 @@ const en = {
   // Toast
   "toast.saved": "Saved successfully",
 
+  // Updater
+  "update.available": "Update Available",
+  "update.newVersion": "Version {{version}} is available (you have {{current}}).",
+  "update.installNow": "Install & Restart",
+  "update.later": "Later",
+  "update.downloading": "Downloading... {{percent}}%",
+  "update.downloadingUnknown": "Downloading...",
+
   // Confirmations
   "confirm.closeBundle": "This bundle has unsaved changes. Close anyway?",
   "confirm.closeBundleTitle": "Unsaved Changes",

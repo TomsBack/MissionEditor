@@ -24,6 +24,9 @@ import { FlowGraph } from "./components/FlowGraph";
 import { ExportPreview } from "./components/ExportPreview";
 import { TemplateDialog } from "./components/TemplateDialog";
 import { SettingsDialog } from "./components/SettingsDialog";
+import { UpdateDialog } from "./components/UpdateDialog";
+import { checkForUpdate, type UpdateInfo } from "./utils/updater";
+import type { Update } from "@tauri-apps/plugin-updater";
 import {
   IconNew, IconOpen, IconImport, IconSave, IconSaveAs, IconPreview,
   IconUndo, IconRedo, IconSettings, IconRecent,
@@ -62,6 +65,7 @@ function App() {
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [recentFiles, setRecentFiles] = useState<string[]>(getRecentFiles());
   const [settings, setSettingsState] = useState<EditorSettings>(loadSettings);
+  const [pendingUpdate, setPendingUpdate] = useState<{ update: Update; info: UpdateInfo } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Keep a ref for use in the window close handler
@@ -86,6 +90,17 @@ function App() {
   useEffect(() => {
     loadLanguage(settings.language);
     return onLanguageChange(() => setTranslationVersion((v) => v + 1));
+  }, []);
+
+  // Check for updates once on startup. Swallow failures (offline, not signed, etc).
+  useEffect(() => {
+    let cancelled = false;
+    checkForUpdate()
+      .then((result) => {
+        if (!cancelled && result) setPendingUpdate(result);
+      })
+      .catch((err) => console.warn("update check failed", err));
+    return () => { cancelled = true; };
   }, []);
 
   // Apply appearance settings
@@ -608,6 +623,13 @@ function App() {
           settings={settings}
           onChange={updateSettings}
           onClose={() => setShowSettings(false)}
+        />
+      )}
+      {pendingUpdate && (
+        <UpdateDialog
+          update={pendingUpdate.update}
+          info={pendingUpdate.info}
+          onClose={() => setPendingUpdate(null)}
         />
       )}
       {toast && (
