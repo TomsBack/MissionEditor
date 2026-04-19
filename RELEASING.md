@@ -27,6 +27,15 @@ In the repo on GitHub → Settings → Secrets and variables → Actions → New
 - `TAURI_SIGNING_PRIVATE_KEY` — paste the contents of `~/.tauri/mission-editor.key`
 - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` — the password you set in step 1
 
+## Dry-run before the first real release
+
+Trigger the workflow manually once to validate signing + artifact upload without affecting end users:
+
+1. GitHub → Actions → **Release** → **Run workflow** → accept the default `v0.0.0-dryrun` → Run.
+2. When it finishes, the release appears under Releases marked **Draft** (invisible to `releases/latest/download/...`, so installed apps won't try to pull it).
+3. Expand the draft and confirm the assets: `*-setup.exe`, `*-setup.nsis.zip`, `*-setup.nsis.zip.sig`, and `latest.json` with a non-empty `signature` field.
+4. Delete the draft when done.
+
 ## Cutting a release
 
 1. Bump the version in `package.json`, `src-tauri/tauri.conf.json`, and `src-tauri/Cargo.toml` (keep them in sync).
