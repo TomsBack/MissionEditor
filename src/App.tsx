@@ -101,8 +101,9 @@ function App() {
     const unlisten = getCurrentWindow().onCloseRequested(async (event) => {
       if (closingRef.current) return;
       const hasDirty = bundlesRef.current.some((b) => b.dirty);
-      if (hasDirty) {
-        event.preventDefault();
+      if (!hasDirty) return;
+      event.preventDefault();
+      try {
         const confirmed = await tauriConfirm(t("confirm.unsavedChanges"), {
           title: t("confirm.closeBundleTitle"),
           kind: "warning",
@@ -111,6 +112,8 @@ function App() {
           closingRef.current = true;
           await getCurrentWindow().destroy();
         }
+      } catch (err) {
+        console.error("close handler failed", err);
       }
     });
     return () => { unlisten.then((fn) => fn()); };
