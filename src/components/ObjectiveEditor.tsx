@@ -8,6 +8,7 @@ import {
   TYPE_LABELS,
 } from "../utils/objectives";
 import { ALL_ENTITIES, ALL_ITEMS } from "../utils/registry";
+import { DBC_TRANSFORMATIONS, MC_SOUNDS } from "../utils/suggestions";
 import { translate, entityDisplayName, itemDisplayName, keysWithPrefix, onLanguageChange } from "../utils/translations";
 import { Autocomplete } from "./Autocomplete";
 
@@ -131,6 +132,12 @@ function ObjectiveCard({ index, raw, isFirst, translated, showHints = true, show
     if (field === "name") {
       if (obj.type === "kill" || obj.type === "killsame" || obj.type === "talk") return ALL_ENTITIES;
       if (obj.type === "item") return ALL_ITEMS;
+    }
+    if (field === "transformations" && (obj.type === "kill" || obj.type === "killsame")) {
+      return DBC_TRANSFORMATIONS;
+    }
+    if (field === "spawnSound" || field === "deathSound") {
+      return MC_SOUNDS;
     }
     // Translation key autocomplete for translatable text fields
     if (translated && (field === "dialog" || field === "button" || field === "spawnMessage" || field === "deathMessage")) {
