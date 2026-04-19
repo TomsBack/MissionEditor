@@ -3,6 +3,7 @@ import type { Mission } from "../types/mission";
 import { translate, keysWithPrefix, onLanguageChange } from "../utils/translations";
 import { useTranslation } from "react-i18next";
 import { Autocomplete } from "./Autocomplete";
+import { NumberInput } from "./NumberInput";
 import { ObjectiveEditor } from "./ObjectiveEditor";
 import { RewardEditor } from "./RewardEditor";
 
@@ -128,10 +129,9 @@ export function MissionEditor({ mission, onChange, showHints = true, showAdvance
         <div className="field-grid">
           <div className="field-group">
             <label className="field-label">{t("mission.id")}</label>
-            <input
-              type="number"
+            <NumberInput
               value={mission.id}
-              onChange={(e) => updateField("id", parseInt(e.target.value, 10) || 0)}
+              onChange={(v) => updateField("id", v)}
             />
           </div>
           <div className="field-group">

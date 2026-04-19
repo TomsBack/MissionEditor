@@ -10,6 +10,7 @@ import {
 import { ALL_ITEMS } from "../utils/registry";
 import { translate, keysWithPrefix, onLanguageChange } from "../utils/translations";
 import { Autocomplete } from "./Autocomplete";
+import { NumberInput } from "./NumberInput";
 import { RewardPresetDialog } from "./TemplateDialog";
 
 // Cached button name translation keys for autocomplete (invalidated on language change)
@@ -102,9 +103,8 @@ function RewardCard({ index, raw, translated, showHints = true, onChange, onRemo
     onChange(serializeReward(updated));
   }
 
-  function updateMeta(field: "buttonName" | "nextMissionId", value: string) {
-    const updated = { ...reward, [field]: field === "nextMissionId" ? parseInt(value, 10) || 0 : value };
-    updateAndSerialize(updated);
+  function updateMeta(field: "buttonName", value: string) {
+    updateAndSerialize({ ...reward, [field]: value });
   }
 
   function updateComponent(compIndex: number, comp: RewardComponent) {
@@ -160,10 +160,9 @@ function RewardCard({ index, raw, translated, showHints = true, onChange, onRemo
         </div>
         <div className="field-group">
           <label className="field-label">{t("rewards.nextMissionId")}</label>
-          <input
-            type="number"
+          <NumberInput
             value={reward.nextMissionId}
-            onChange={(e) => updateMeta("nextMissionId", e.target.value)}
+            onChange={(v) => updateAndSerialize({ ...reward, nextMissionId: v })}
           />
         </div>
       </div>

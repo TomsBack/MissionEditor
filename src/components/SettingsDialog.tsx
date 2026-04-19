@@ -4,6 +4,7 @@ import { clearRecentFiles } from "../utils/files";
 import { AVAILABLE_LANGUAGES } from "../utils/languages";
 import { useTranslation } from "react-i18next";
 import { IconTrash } from "./Icons";
+import { NumberInput } from "./NumberInput";
 import { Palette, Globe, Pencil } from "lucide-react";
 
 type SettingsTab = "appearance" | "general" | "editor";
@@ -71,12 +72,11 @@ export function SettingsDialog({ settings, onChange, onClose }: SettingsDialogPr
                     <div className="settings-section-title">{t("settings.display")}</div>
                     <div className="settings-row">
                       <label className="settings-label">{t("settings.fontSize")}</label>
-                      <input
-                        type="number"
+                      <NumberInput
                         min={10}
                         max={20}
                         value={settings.fontSize}
-                        onChange={(e) => update("fontSize", Math.max(10, Math.min(20, parseInt(e.target.value) || 13)))}
+                        onChange={(v) => update("fontSize", v)}
                         style={{ width: 80 }}
                       />
                     </div>
@@ -146,12 +146,11 @@ export function SettingsDialog({ settings, onChange, onClose }: SettingsDialogPr
                     </div>
                     <div className="settings-row">
                       <label className="settings-label">{t("settings.interval")}</label>
-                      <input
-                        type="number"
+                      <NumberInput
                         min={5}
                         max={300}
                         value={settings.autoSaveInterval}
-                        onChange={(e) => update("autoSaveInterval", Math.max(5, parseInt(e.target.value) || 30))}
+                        onChange={(v) => update("autoSaveInterval", v)}
                         style={{ width: 80 }}
                         disabled={!settings.autoSaveEnabled}
                       />
@@ -226,12 +225,11 @@ export function SettingsDialog({ settings, onChange, onClose }: SettingsDialogPr
                     <div className="settings-section-title">{t("settings.export")}</div>
                     <div className="settings-row">
                       <label className="settings-label">{t("settings.jsonIndent")}</label>
-                      <input
-                        type="number"
+                      <NumberInput
                         min={1}
                         max={8}
                         value={settings.jsonIndent}
-                        onChange={(e) => update("jsonIndent", Math.max(1, Math.min(8, parseInt(e.target.value) || 2)))}
+                        onChange={(v) => update("jsonIndent", v)}
                         style={{ width: 80 }}
                       />
                     </div>
