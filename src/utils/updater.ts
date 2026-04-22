@@ -8,10 +8,14 @@ export interface UpdateInfo {
   date?: string;
 }
 
+const DEFAULT_CHECK_TIMEOUT_MS = 5000;
+
 // Thrown when no update is available or the check itself fails. Callers treat
 // both the same way (nothing to show the user), so we don't distinguish.
-export async function checkForUpdate(): Promise<{ update: Update; info: UpdateInfo } | null> {
-  const update = await check();
+export async function checkForUpdate(
+  timeoutMs = DEFAULT_CHECK_TIMEOUT_MS,
+): Promise<{ update: Update; info: UpdateInfo } | null> {
+  const update = await withTimeout(check({ timeout: timeoutMs }), timeoutMs);
   if (!update) return null;
   return {
     update,
@@ -22,6 +26,18 @@ export async function checkForUpdate(): Promise<{ update: Update; info: UpdateIn
       date: update.date,
     },
   };
+}
+
+// plugin-updater's `timeout` applies per-request; wrap the whole call so a
+// hung DNS / TCP resolution can't pin us past the limit either.
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`update check timed out after ${ms}ms`)), ms);
+    promise.then(
+      (v) => { clearTimeout(timer); resolve(v); },
+      (e) => { clearTimeout(timer); reject(e); },
+    );
+  });
 }
 
 export async function installUpdateAndRestart(

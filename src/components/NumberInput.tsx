@@ -13,12 +13,13 @@ interface Props {
 }
 
 export function NumberInput({ value, onChange, min, max, step, float, disabled, className, style }: Props) {
-  const [draft, setDraft] = useState<string>(String(value));
+  const safeValue = Number.isFinite(value) ? value : 0;
+  const [draft, setDraft] = useState<string>(String(safeValue));
 
   useEffect(() => {
-    if (Number(draft) !== value) setDraft(String(value));
+    if (Number(draft) !== safeValue) setDraft(String(safeValue));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value]);
+  }, [safeValue]);
 
   return (
     <input
@@ -32,15 +33,16 @@ export function NumberInput({ value, onChange, min, max, step, float, disabled, 
         const v = e.target.value;
         setDraft(v);
         if (v === "" || v === "-" || v === "." || v === "-.") return;
-        const n = float ? parseFloat(v) : parseInt(v, 10);
-        if (!Number.isFinite(n)) return;
-        let clamped = n;
-        if (min !== undefined) clamped = Math.max(min, clamped);
-        if (max !== undefined) clamped = Math.min(max, clamped);
-        onChange(clamped);
+        // Number() handles "1e5" correctly; parseInt would return 1.
+        const raw = Number(v);
+        if (!Number.isFinite(raw)) return;
+        let n = float ? raw : Math.trunc(raw);
+        if (min !== undefined) n = Math.max(min, n);
+        if (max !== undefined) n = Math.min(max, n);
+        onChange(n);
       }}
       onBlur={() => {
-        if (draft === "" || draft === "-" || draft === "." || draft === "-.") setDraft(String(value));
+        if (draft === "" || draft === "-" || draft === "." || draft === "-.") setDraft(String(safeValue));
       }}
     />
   );

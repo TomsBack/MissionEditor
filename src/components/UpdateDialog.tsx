@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Update } from "@tauri-apps/plugin-updater";
-import { installUpdateAndRestart, type UpdateInfo } from "../utils/updater";
+import { checkForUpdate, installUpdateAndRestart, type UpdateInfo } from "../utils/updater";
 
 interface Props {
   update: Update;
@@ -9,8 +9,9 @@ interface Props {
   onClose: () => void;
 }
 
-export function UpdateDialog({ update, info, onClose }: Props) {
+export function UpdateDialog({ update: initialUpdate, info, onClose }: Props) {
   const { t } = useTranslation();
+  const [update, setUpdate] = useState(initialUpdate);
   const [installing, setInstalling] = useState(false);
   const [progress, setProgress] = useState<{ downloaded: number; total: number | null }>({ downloaded: 0, total: null });
   const [error, setError] = useState<string | null>(null);
@@ -18,6 +19,7 @@ export function UpdateDialog({ update, info, onClose }: Props) {
   async function install() {
     setInstalling(true);
     setError(null);
+    setProgress({ downloaded: 0, total: null });
     try {
       await installUpdateAndRestart(update, (downloaded, total) => {
         setProgress({ downloaded, total });
@@ -25,6 +27,13 @@ export function UpdateDialog({ update, info, onClose }: Props) {
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       setInstalling(false);
+      // downloadAndInstall consumes the handle; a retry needs a fresh one.
+      try {
+        const fresh = await checkForUpdate();
+        if (fresh) setUpdate(fresh.update);
+      } catch {
+        // leave the stale handle; install button will surface the same error on retry
+      }
     }
   }
 

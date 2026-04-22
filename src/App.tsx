@@ -118,17 +118,20 @@ function App() {
       const hasDirty = bundlesRef.current.some((b) => b.dirty);
       if (!hasDirty) return;
       event.preventDefault();
+      let confirmed: boolean;
       try {
-        const confirmed = await tauriConfirm(t("confirm.unsavedChanges"), {
+        confirmed = await tauriConfirm(t("confirm.unsavedChanges"), {
           title: t("confirm.closeBundleTitle"),
           kind: "warning",
         });
-        if (confirmed) {
-          closingRef.current = true;
-          await getCurrentWindow().destroy();
-        }
       } catch (err) {
-        console.error("close handler failed", err);
+        // Dialog plugin failed; fall back to native confirm so the window can still close.
+        console.error("close handler dialog failed", err);
+        confirmed = window.confirm(t("confirm.unsavedChanges"));
+      }
+      if (confirmed) {
+        closingRef.current = true;
+        await getCurrentWindow().destroy();
       }
     });
     return () => { unlisten.then((fn) => fn()); };

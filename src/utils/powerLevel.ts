@@ -13,5 +13,6 @@ export function computePowerLevel(hpStr: string, cfg: PLConfig): number | null {
   const atr = Math.floor(hp / cfg.conStatInc);
   let res = Math.max(2, atr * 35);
   if (cfg.bpModeSquared) res = res * Math.floor(res / 2);
+  if (!Number.isSafeInteger(res)) return null;
   return Math.max(1, res);
 }
