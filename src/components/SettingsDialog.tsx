@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { EditorSettings } from "../utils/settings";
 import { clearRecentFiles } from "../utils/files";
 import { AVAILABLE_LANGUAGES } from "../utils/languages";
+import { THEMES, type ThemeName } from "../utils/theme";
 import { useTranslation } from "react-i18next";
 import { IconTrash } from "./Icons";
 import { NumberInput } from "./NumberInput";
@@ -55,16 +56,29 @@ export function SettingsDialog({ settings, onChange, onClose }: SettingsDialogPr
                 <>
                   <div className="settings-section">
                     <div className="settings-section-title">{t("settings.theme")}</div>
-                    <div className="settings-row">
-                      <label className="settings-label">{t("settings.colorTheme")}</label>
-                      <select
-                        value={settings.theme}
-                        onChange={(e) => update("theme", e.target.value as "dark" | "light")}
-                        style={{ width: 120 }}
-                      >
-                        <option value="dark">{t("settings.themeDark")}</option>
-                        <option value="light">{t("settings.themeLight")}</option>
-                      </select>
+                    <div className="theme-grid" role="radiogroup" aria-label={t("settings.colorTheme")}>
+                      {(Object.keys(THEMES) as ThemeName[]).map((id) => {
+                        const theme = THEMES[id];
+                        const selected = settings.theme === id;
+                        return (
+                          <button
+                            key={id}
+                            type="button"
+                            role="radio"
+                            aria-checked={selected}
+                            className={`theme-card ${selected ? "selected" : ""}`}
+                            onClick={() => update("theme", id)}
+                          >
+                            <div className="theme-card-swatch" aria-hidden="true">
+                              <span style={{ background: theme.palette["bg-primary"] }} />
+                              <span style={{ background: theme.palette["bg-panel"] }} />
+                              <span style={{ background: theme.palette.accent }} />
+                              <span style={{ background: theme.palette["text-primary"] }} />
+                            </div>
+                            <div className="theme-card-name">{t(`settings.themes.${id}`, theme.name)}</div>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 

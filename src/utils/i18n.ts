@@ -194,10 +194,15 @@ const en = {
 
   // Settings: Appearance
   "settings.appearance": "Appearance",
-  "settings.theme": "Theme",
+  "settings.theme": "Color theme",
   "settings.colorTheme": "Color theme",
   "settings.themeDark": "Dark",
   "settings.themeLight": "Light",
+  "settings.themes.dark": "Dark",
+  "settings.themes.light": "Light",
+  "settings.themes.nord": "Nord",
+  "settings.themes.dracula": "Dracula",
+  "settings.themes.solarized-light": "Solarized Light",
   "settings.display": "Display",
   "settings.fontSize": "Font size (px)",
   "settings.compactMode": "Compact mode (reduced padding)",

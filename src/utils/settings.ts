@@ -1,3 +1,5 @@
+import { isThemeName, type ThemeName } from "./theme";
+
 const SETTINGS_KEY = "mission-editor-settings";
 const SETTINGS_VERSION = 2;
 
@@ -7,7 +9,7 @@ interface StoredSettings extends Partial<EditorSettings> {
 
 export interface EditorSettings {
   // Appearance
-  theme: "dark" | "light";
+  theme: ThemeName;
   fontSize: number; // px, for editor content
   compactMode: boolean;
 
@@ -81,6 +83,11 @@ function migrate(stored: StoredSettings): EditorSettings {
   // to Normal mode (unsquared). Reset stale values once.
   if ((__version ?? 1) < 2) {
     merged.plBPModeSquared = DEFAULTS.plBPModeSquared;
+  }
+  // Guard against unknown theme strings sneaking in from older builds or
+  // hand-edited storage; fall back to the default rather than rendering naked.
+  if (!isThemeName(merged.theme)) {
+    merged.theme = DEFAULTS.theme;
   }
   return merged;
 }
