@@ -1,8 +1,11 @@
 import "@testing-library/jest-dom/vitest";
 import { afterEach } from "vitest";
 import { cleanup } from "@testing-library/react";
+import { clearMocks } from "@tauri-apps/api/mocks";
+import "./src/utils/i18n";
 
 afterEach(() => {
   cleanup();
+  clearMocks();
   localStorage.clear();
 });
