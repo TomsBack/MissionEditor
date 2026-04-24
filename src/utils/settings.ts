@@ -48,7 +48,7 @@ const DEFAULTS: EditorSettings = {
   jsonIndent: 2,
   showPowerLevelHint: true,
   plConStatInc: 0.5,
-  plBPModeSquared: true,
+  plBPModeSquared: false,
 };
 
 export function loadSettings(): EditorSettings {
