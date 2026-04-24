@@ -75,10 +75,11 @@ export function saveSettings(settings: EditorSettings) {
 }
 
 function migrate(stored: StoredSettings): EditorSettings {
-  const merged: EditorSettings = { ...DEFAULTS, ...stored };
+  const { __version, ...rest } = stored;
+  const merged: EditorSettings = { ...DEFAULTS, ...rest };
   // v2: BPMode squared was true by default, but the in-game scouter defaults
   // to Normal mode (unsquared). Reset stale values once.
-  if ((stored.__version ?? 1) < 2) {
+  if ((__version ?? 1) < 2) {
     merged.plBPModeSquared = DEFAULTS.plBPModeSquared;
   }
   return merged;
