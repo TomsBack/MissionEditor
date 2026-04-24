@@ -245,6 +245,7 @@ export function SettingsDialog({ settings, onChange, onClose }: SettingsDialogPr
                         disabled={!settings.showPowerLevelHint}
                       />
                     </div>
+                    <div className="settings-hint">{t("settings.powerLevel.hint")}</div>
                     <div className="settings-row">
                       <label className="settings-label">
                         <input
@@ -256,7 +257,6 @@ export function SettingsDialog({ settings, onChange, onClose }: SettingsDialogPr
                         {t("settings.powerLevel.bpMode")}
                       </label>
                     </div>
-                    <div className="settings-hint">{t("settings.powerLevel.hint")}</div>
                   </div>
 
                   <div className="settings-section">
