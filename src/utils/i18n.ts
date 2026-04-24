@@ -203,6 +203,8 @@ const en = {
   "settings.themes.nord": "Nord",
   "settings.themes.dracula": "Dracula",
   "settings.themes.solarized-light": "Solarized Light",
+  "settings.themes.monochrome": "Monochrome",
+  "settings.themes.high-contrast": "High Contrast",
   "settings.display": "Display",
   "settings.fontSize": "Font size (px)",
   "settings.compactMode": "Compact mode (reduced padding)",

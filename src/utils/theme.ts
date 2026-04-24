@@ -5,7 +5,9 @@ export type ThemeName =
   | "light"
   | "nord"
   | "dracula"
-  | "solarized-light";
+  | "solarized-light"
+  | "monochrome"
+  | "high-contrast";
 
 interface ThemePalette {
   "bg-primary": string;
@@ -111,6 +113,40 @@ export const THEMES: Record<ThemeName, ThemeDefinition> = {
       "text-muted": "#93a1a1",
       accent: "#268bd2",
       "accent-hover": "#2076b8",
+    },
+  },
+  monochrome: {
+    name: "Monochrome",
+    palette: {
+      "bg-primary": "#181818",
+      "bg-secondary": "#1f1f1f",
+      "bg-panel": "#262626",
+      "bg-input": "#0d0d0d",
+      "bg-hover": "#2e2e2e",
+      "bg-selected": "#3a3a3a",
+      border: "#2e2e2e",
+      "text-primary": "#ededed",
+      "text-secondary": "#a0a0a0",
+      "text-muted": "#606060",
+      accent: "#b8b8b8",
+      "accent-hover": "#d8d8d8",
+    },
+  },
+  "high-contrast": {
+    name: "High Contrast",
+    palette: {
+      "bg-primary": "#000000",
+      "bg-secondary": "#000000",
+      "bg-panel": "#0a0a0a",
+      "bg-input": "#000000",
+      "bg-hover": "#1a1a1a",
+      "bg-selected": "#1f4068",
+      border: "#ffffff",
+      "text-primary": "#ffffff",
+      "text-secondary": "#ffffff",
+      "text-muted": "#c0c0c0",
+      accent: "#ffff00",
+      "accent-hover": "#ffd700",
     },
   },
 };
