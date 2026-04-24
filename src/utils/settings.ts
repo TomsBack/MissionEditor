@@ -1,4 +1,9 @@
 const SETTINGS_KEY = "mission-editor-settings";
+const SETTINGS_VERSION = 2;
+
+interface StoredSettings extends Partial<EditorSettings> {
+  __version?: number;
+}
 
 export interface EditorSettings {
   // Appearance
@@ -55,7 +60,8 @@ export function loadSettings(): EditorSettings {
   try {
     const stored = localStorage.getItem(SETTINGS_KEY);
     if (!stored) return { ...DEFAULTS };
-    return { ...DEFAULTS, ...JSON.parse(stored) };
+    const parsed = JSON.parse(stored) as StoredSettings;
+    return migrate(parsed);
   } catch {
     return { ...DEFAULTS };
   }
@@ -63,6 +69,17 @@ export function loadSettings(): EditorSettings {
 
 export function saveSettings(settings: EditorSettings) {
   try {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    const payload: StoredSettings = { ...settings, __version: SETTINGS_VERSION };
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(payload));
   } catch {}
+}
+
+function migrate(stored: StoredSettings): EditorSettings {
+  const merged: EditorSettings = { ...DEFAULTS, ...stored };
+  // v2: BPMode squared was true by default, but the in-game scouter defaults
+  // to Normal mode (unsquared). Reset stale values once.
+  if ((stored.__version ?? 1) < 2) {
+    merged.plBPModeSquared = DEFAULTS.plBPModeSquared;
+  }
+  return merged;
 }

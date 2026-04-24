@@ -92,14 +92,24 @@ function App() {
     return onLanguageChange(() => setTranslationVersion((v) => v + 1));
   }, []);
 
-  // Check for updates once on startup. Swallow failures (offline, not signed, etc).
+  // Check for updates once on startup, deferred past first paint so the network
+  // round-trip doesn't compete with initial render. Swallow failures (offline,
+  // not signed, etc).
   useEffect(() => {
     let cancelled = false;
-    checkForUpdate()
-      .then((result) => {
-        if (!cancelled && result) setPendingUpdate(result);
-      })
-      .catch((err) => console.warn("update check failed", err));
+    const idle = (cb: () => void) => {
+      const ric = (window as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback;
+      if (ric) ric(cb, { timeout: 3000 });
+      else setTimeout(cb, 1500);
+    };
+    idle(() => {
+      if (cancelled) return;
+      checkForUpdate()
+        .then((result) => {
+          if (!cancelled && result) setPendingUpdate(result);
+        })
+        .catch((err) => console.warn("update check failed", err));
+    });
     return () => { cancelled = true; };
   }, []);
 
@@ -130,6 +140,12 @@ function App() {
         confirmed = window.confirm(t("confirm.unsavedChanges"));
       }
       if (confirmed) {
+        // Snapshot the latest dirty state so crash-recovery sees what the user last had.
+        if (settingsRef.current.autoSaveEnabled) {
+          saveAutoSaveData({
+            bundles: bundlesRef.current.map((b) => ({ bundle: b.bundle, path: b.path })),
+          });
+        }
         closingRef.current = true;
         await getCurrentWindow().destroy();
       }
@@ -146,18 +162,21 @@ function App() {
     saveSettings(updated);
   }
 
-  // Auto-save at the configured interval
+  // Auto-save at the configured interval. Read bundles from a ref so the timer
+  // doesn't reset on every keystroke (which would prevent it from ever firing
+  // during continuous typing).
   useEffect(() => {
     if (!settings.autoSaveEnabled) return;
     const interval = setInterval(() => {
-      if (bundles.some((b) => b.dirty)) {
+      const current = bundlesRef.current;
+      if (current.some((b) => b.dirty)) {
         saveAutoSaveData({
-          bundles: bundles.map((b) => ({ bundle: b.bundle, path: b.path })),
+          bundles: current.map((b) => ({ bundle: b.bundle, path: b.path })),
         });
       }
     }, settings.autoSaveInterval * 1000);
     return () => clearInterval(interval);
-  }, [bundles, settings.autoSaveEnabled, settings.autoSaveInterval]);
+  }, [settings.autoSaveEnabled, settings.autoSaveInterval]);
 
   // Recover auto-save on mount
   useEffect(() => {
