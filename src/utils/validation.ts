@@ -226,8 +226,8 @@ function validateBundleInner(bundle: MissionBundle): ValidationWarning[] {
           });
         }
 
-        // Self-referencing reward
-        if (reward.nextMissionId === mission.id) {
+        // Self-referencing reward (0 means "no next mission" by convention)
+        if (reward.nextMissionId !== 0 && reward.nextMissionId === mission.id) {
           warnings.push({
             level: "warning",
             missionIndex: mi,
