@@ -11,27 +11,27 @@
     "gen-lang": "node gen-translations.cjs"
   },
   "dependencies": {
-    "@dnd-kit/react": "^0.3.2",
-    "@tauri-apps/api": "^2",
-    "@tauri-apps/plugin-dialog": "^2.6.0",
-    "@tauri-apps/plugin-fs": "^2.4.5",
-    "@tauri-apps/plugin-opener": "^2",
+    "@dnd-kit/react": "^0.4.0",
+    "@tauri-apps/api": "^2.10.1",
+    "@tauri-apps/plugin-dialog": "^2.7.0",
+    "@tauri-apps/plugin-fs": "^2.5.0",
+    "@tauri-apps/plugin-opener": "^2.5.3",
     "@tauri-apps/plugin-process": "^2.3.1",
     "@tauri-apps/plugin-updater": "^2.10.1",
     "@xyflow/react": "^12.10.2",
-    "i18next": "^26.0.3",
-    "lucide-react": "^1.7.0",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "react-i18next": "^17.0.2",
-    "react-resizable-panels": "^4.8.0"
+    "i18next": "^26.0.8",
+    "lucide-react": "^1.11.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "react-i18next": "^17.0.4",
+    "react-resizable-panels": "^4.10.0"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2",
-    "@types/react": "^19.1.8",
-    "@types/react-dom": "^19.1.6",
-    "@vitejs/plugin-react": "^4.6.0",
-    "typescript": "~5.8.3",
-    "vite": "^7.0.4"
+    "@tauri-apps/cli": "^2.10.1",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "typescript": "~6.0.3",
+    "vite": "^8.0.10"
   }
 }
