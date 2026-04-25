@@ -12,6 +12,7 @@ import { validateBundle, type ValidationWarning } from "./utils/validation";
 import { applyTheme } from "./utils/theme";
 import { loadSettings, saveSettings, type EditorSettings } from "./utils/settings";
 import { loadLanguage, onLanguageChange } from "./utils/translations";
+import { setLanguage } from "./utils/i18n";
 import { computeEditedMissionIds } from "./utils/missionDirty";
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import { useTranslation } from "react-i18next";
@@ -49,7 +50,7 @@ type BottomTab = "validation" | "flow" | null;
 type ToastMessage = { text: string; type: "error" | "success" };
 
 function App() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
   // Undo/redo owns the bundle state (single source of truth)
   const {
@@ -161,7 +162,9 @@ function App() {
 
   function updateSettings(updated: EditorSettings) {
     if (updated.language !== settings.language) {
-      i18n.changeLanguage(updated.language);
+      // Lazy-loads the locale chunk before switching; mod translations are a
+      // separate fetch handled by translations.ts.
+      void setLanguage(updated.language);
       loadLanguage(updated.language);
     }
     setSettingsState(updated);
