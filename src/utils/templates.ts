@@ -155,3 +155,30 @@ export function threeAlignmentItemReward(item: string, count: number, tpAmount: 
 export function nothingReward(nextId: number): string[] {
   return [`nothing;;${nextId}`];
 }
+
+/**
+ * Objective preset templates. Each yields a single raw objective string that
+ * the editor appends to the current variant's objective list. They mirror the
+ * defaults in MISSION_TEMPLATES but are scoped to one objective at a time, so
+ * authors can build up a mission step-by-step.
+ */
+export interface ObjectivePreset {
+  /** i18n key for the user-facing name. */
+  nameKey: string;
+  /** i18n key for the description shown beneath the name. */
+  descKey: string;
+  /** The raw objective string this preset emits. */
+  raw: string;
+}
+
+export const OBJECTIVE_PRESETS: ObjectivePreset[] = [
+  { nameKey: "objPreset.kill", descKey: "objPreset.killDesc", raw: "kill;N;H100;A50;Pspwn" },
+  { nameKey: "objPreset.killsame", descKey: "objPreset.killsameDesc", raw: "killsame;N;M5;H50;A25" },
+  { nameKey: "objPreset.talk", descKey: "objPreset.talkDesc", raw: "talk;N;G;B" },
+  { nameKey: "objPreset.item", descKey: "objPreset.itemDesc", raw: "item;Nminecraft:diamond;M5" },
+  { nameKey: "objPreset.biome", descKey: "objPreset.biomeDesc", raw: "biome;NPlains" },
+  { nameKey: "objPreset.biome2", descKey: "objPreset.biome2Desc", raw: "biome2;NPlains" },
+  { nameKey: "objPreset.dim", descKey: "objPreset.dimDesc", raw: "dim;NNether" },
+  { nameKey: "objPreset.lvl", descKey: "objPreset.lvlDesc", raw: "lvl;N10" },
+  { nameKey: "objPreset.state", descKey: "objPreset.stateDesc", raw: "state;N" },
+];

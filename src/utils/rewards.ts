@@ -1,4 +1,5 @@
 import type { RewardChoice, RewardComponent, RewardType, TpMode } from "../types/mission";
+import { itemDisplayName } from "./translations";
 
 /** Parse a single reward component string like "tp!fix!150" or "item!mod:name,5". */
 function parseComponent(raw: string): RewardComponent {
@@ -87,3 +88,42 @@ export const TP_MODE_LABELS: Record<TpMode, string> = {
   align: "Alignment-based",
   lvlalign: "Level x Alignment",
 };
+
+/** One-line, human-readable preview of a single reward component. */
+function summarizeComponent(comp: RewardComponent): string | null {
+  switch (comp.type) {
+    case "nothing":
+      return null;
+    case "tp": {
+      const mode = comp.tpMode ?? "fix";
+      const v = comp.value || "0";
+      if (mode === "fix") return `${v} TP`;
+      if (mode === "lvl") return `${v}× lvl TP`;
+      if (mode === "align") return `${v} TP/align`;
+      if (mode === "lvlalign") return `${v}× lvl·align TP`;
+      return `${v} TP`;
+    }
+    case "align": {
+      const v = comp.value || "0";
+      return v.startsWith("+") || v.startsWith("-") ? `${v} align` : `${v} align`;
+    }
+    case "item": {
+      // Format: "modid:name::meta,count" — pull out the count if present.
+      const [idPart, countPart] = (comp.value || "").split(",");
+      const id = idPart.trim();
+      const count = countPart?.trim();
+      const name = itemDisplayName(id) ?? id;
+      return count ? `${name} ×${count}` : name;
+    }
+    case "com":
+      return `/${comp.value || "command"}`;
+    default:
+      return null;
+  }
+}
+
+/** One-line, human-readable preview of an entire reward choice (excluding link). */
+export function summarizeReward(reward: RewardChoice): string {
+  const parts = reward.components.map(summarizeComponent).filter((s): s is string => !!s);
+  return parts.length > 0 ? parts.join(" · ") : "Nothing";
+}
