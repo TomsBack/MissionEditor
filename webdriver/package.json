@@ -1,0 +1,24 @@
+{
+  "name": "missioneditor-e2e",
+  "version": "0.0.0",
+  "private": true,
+  "description": "End-to-end tests that drive the real Tauri binary via tauri-driver and WebdriverIO.",
+  "type": "module",
+  "scripts": {
+    "test": "wdio run wdio.conf.ts",
+    "test:smoke": "wdio run wdio.conf.ts --spec test/specs/smoke.e2e.ts"
+  },
+  "devDependencies": {
+    "@types/chai": "^5.2.2",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^22.10.0",
+    "@wdio/cli": "^9.5.5",
+    "@wdio/local-runner": "^9.5.5",
+    "@wdio/mocha-framework": "^9.5.5",
+    "@wdio/spec-reporter": "^9.5.5",
+    "chai": "^5.1.2",
+    "tsx": "^4.19.2",
+    "typescript": "~5.6.3",
+    "webdriverio": "^9.5.5"
+  }
+}

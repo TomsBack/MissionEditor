@@ -1,0 +1,5 @@
+node_modules/
+.wdio-vscode-service/
+logs/
+allure-results/
+allure-report/

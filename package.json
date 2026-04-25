@@ -12,7 +12,10 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:types": "vitest run --typecheck.enabled=true --typecheck.only"
+    "test:types": "vitest run --typecheck.enabled=true --typecheck.only",
+    "e2e:build": "tauri build --no-bundle",
+    "e2e": "pnpm --dir webdriver test",
+    "e2e:smoke": "pnpm --dir webdriver test:smoke"
   },
   "dependencies": {
     "@dnd-kit/react": "^0.4.0",
