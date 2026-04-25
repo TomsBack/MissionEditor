@@ -114,7 +114,7 @@ export const MISSION_TEMPLATES: MissionTemplate[] = [
     description: "Reach a minimum player level",
     create: (id) => ({
       ...baseMission(id, "Train to Level Up"),
-      objectives: [["start", "lvl;N10"]],
+      objectives: [["start", "lvl;M10"]],
       rewards: [[`tp!fix!200;;${id + 1}`]],
     }),
   },
@@ -179,6 +179,6 @@ export const OBJECTIVE_PRESETS: ObjectivePreset[] = [
   { nameKey: "objPreset.biome", descKey: "objPreset.biomeDesc", raw: "biome;NPlains" },
   { nameKey: "objPreset.biome2", descKey: "objPreset.biome2Desc", raw: "biome2;NPlains" },
   { nameKey: "objPreset.dim", descKey: "objPreset.dimDesc", raw: "dim;NNether" },
-  { nameKey: "objPreset.lvl", descKey: "objPreset.lvlDesc", raw: "lvl;N10" },
+  { nameKey: "objPreset.lvl", descKey: "objPreset.lvlDesc", raw: "lvl;M10" },
   { nameKey: "objPreset.state", descKey: "objPreset.stateDesc", raw: "state;N" },
 ];

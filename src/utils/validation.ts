@@ -195,14 +195,14 @@ function validateBundleInner(bundle: MissionBundle): ValidationWarning[] {
           }
         }
 
-        // Level objective: validate name is a number
-        if (obj.type === "lvl" && obj.name) {
-          if (isNaN(Number(obj.name)) || Number(obj.name) <= 0) {
+        // Level objective: target level is M (amount), not N (name).
+        if (obj.type === "lvl" && obj.amount) {
+          if (isNaN(Number(obj.amount)) || Number(obj.amount) <= 0) {
             warnings.push({
               level: "warning",
               missionIndex: mi,
               missionId: mission.id,
-              message: `Objective #${oi}${variantLabel}: level target "${obj.name}" should be a positive number`,
+              message: `Objective #${oi}${variantLabel}: level target "${obj.amount}" should be a positive number`,
             });
           }
         }

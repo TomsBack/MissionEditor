@@ -135,7 +135,9 @@ describe("objective validation", () => {
   });
 
   it("warns when lvl objective has non-numeric target", () => {
-    const m = mission({ objectives: [["start", "lvl;Nabc"]] });
+    // lvl uses M (amount) for the level target, not N — the mod's
+    // MissionProgress check reads getMCo_dataI(os, "M").
+    const m = mission({ objectives: [["start", "lvl;Mabc"]] });
     const w = validateBundle(bundle([m]));
     expect(w.some((x) => x.message.includes("level target"))).toBe(true);
   });

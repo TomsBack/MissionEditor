@@ -78,7 +78,10 @@ export const FIELDS_BY_TYPE: Record<ObjectiveType, (keyof Objective)[]> = {
   item: ["name", "amount"],
   talk: ["name", "dialog", "button"],
   state: ["name"],
-  lvl: ["name"],
+  // The mod compares the player's level against M (amount), not N (name).
+  // Storing this as `amount` keeps the editor field consistent with the
+  // serialization format the mod actually reads.
+  lvl: ["amount"],
   next: [],
   start: [],
   skip: [],
