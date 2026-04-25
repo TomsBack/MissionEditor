@@ -460,6 +460,20 @@ function VariantTab({ value, index, isActive, isFallback, isSimulatorMatch, canR
 
 function VariantContextHint({ propValue, isFallback }: { propValue: string; isFallback: boolean }) {
   const { t } = useTranslation();
+  const semantics = describeProp(propValue);
+
+  // Random-reward flag is only meaningful on variant 0 and overrides the
+  // normal race/class lookup, so it takes precedence over the fallback hint.
+  if (semantics.isRandomReward) {
+    return (
+      <div className="variant-hint variant-hint-info">
+        {isFallback
+          ? t("mission.variantRandomReward")
+          : t("mission.variantRandomRewardWrongSlot")}
+      </div>
+    );
+  }
+
   // Variant 0 is the fallback regardless of its prop value; show the fallback
   // explanation rather than the more detailed prop semantics.
   if (isFallback) {
@@ -469,8 +483,6 @@ function VariantContextHint({ propValue, isFallback }: { propValue: string; isFa
       </div>
     );
   }
-
-  const semantics = describeProp(propValue);
 
   if (semantics.isUnreachableHalfSaiyan) {
     return (

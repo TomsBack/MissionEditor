@@ -94,4 +94,12 @@ describe("describeProp", () => {
   it("treats empty as unknown", () => {
     expect(describeProp("").isUnknown).toBe(true);
   });
+
+  it("recognizes randrew as a special flag, not as a typo", () => {
+    const d = describeProp("randrew");
+    expect(d.isRandomReward).toBe(true);
+    expect(d.isUnknown).toBe(false);
+    expect(d.races).toEqual([]);
+    expect(d.classes).toEqual([]);
+  });
 });

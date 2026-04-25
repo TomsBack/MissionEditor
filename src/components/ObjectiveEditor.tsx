@@ -10,6 +10,7 @@ import {
 } from "../utils/objectives";
 import { ALL_ENTITIES, ALL_ITEMS } from "../utils/registry";
 import { DBC_TRANSFORMATIONS, MC_SOUNDS } from "../utils/suggestions";
+import { MC_BIOMES, MC_DIMENSIONS } from "../utils/worldRegistry";
 import { translate, entityDisplayName, itemDisplayName, keysWithPrefix, onLanguageChange } from "../utils/translations";
 import { formatNumber } from "../utils/formatNumber";
 import { computePowerLevel, type PLConfig } from "../utils/powerLevel";
@@ -151,6 +152,8 @@ function ObjectiveCard({ index, raw, isFirst, translated, showHints = true, show
     if (field === "name") {
       if (obj.type === "kill" || obj.type === "killsame" || obj.type === "talk") return ALL_ENTITIES;
       if (obj.type === "item") return ALL_ITEMS;
+      if (obj.type === "biome" || obj.type === "biome2") return MC_BIOMES;
+      if (obj.type === "dim" || obj.type === "dim2") return MC_DIMENSIONS;
     }
     if (field === "transformations" && (obj.type === "kill" || obj.type === "killsame")) {
       return DBC_TRANSFORMATIONS;

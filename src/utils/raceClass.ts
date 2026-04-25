@@ -22,11 +22,19 @@ export const DBC_CLASSES = [
 export const NC_CLASSES = ["Survival"];
 export const NC_CLANS = ["Clanless", "Hyuuga", "Uchiha"];
 
-/** Suggested values for the Mission `Property` field (race or class names). */
+/**
+ * Special, non-race/class prop value: setting `props[0]` to "randrew" makes
+ * the mod pick a random reward choice on completion regardless of which
+ * button the player clicked. See JRMCorePacHanSMission.java line 287.
+ */
+export const RANDREW_FLAG = "randrew";
+
+/** Suggested values for the Mission `Property` field. */
 export const PROPERTY_SUGGESTIONS = [
   "default",
   ...DBC_RACES,
   ...DBC_CLASSES,
   ...NC_CLASSES,
   ...NC_CLANS,
+  RANDREW_FLAG,
 ];

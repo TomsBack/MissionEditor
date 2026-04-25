@@ -67,7 +67,13 @@ export interface PropSemantics {
   catchesHalfSaiyan: boolean;
   /** True when the value is "Half-Saiyan" — never matches in DBC saga mode. */
   isUnreachableHalfSaiyan: boolean;
-  /** True when the value matches no known race or class (a typo, or unused). */
+  /**
+   * True when the value is "randrew" — special flag that makes the mod pick
+   * a random reward choice on completion regardless of the button clicked.
+   * Only meaningful on `props[0]`.
+   */
+  isRandomReward: boolean;
+  /** True when the value matches no known race, class, or special flag. */
   isUnknown: boolean;
 }
 
@@ -77,13 +83,22 @@ const KNOWN_CLASSES_LOWER = new Set(DBC_CLASSES.map((c) => c.toLowerCase()));
 /** Classify what the value in `props[i]` matches in DBC saga mode. */
 export function describeProp(value: string): PropSemantics {
   const v = value.trim().toLowerCase();
-  if (!v) {
-    return { races: [], classes: [], catchesHalfSaiyan: false, isUnreachableHalfSaiyan: false, isUnknown: true };
-  }
+  const empty: PropSemantics = {
+    races: [],
+    classes: [],
+    catchesHalfSaiyan: false,
+    isUnreachableHalfSaiyan: false,
+    isRandomReward: false,
+    isUnknown: true,
+  };
+  if (!v) return empty;
   const races = DBC_RACES.filter((r) => r.toLowerCase() === v);
   const classes = DBC_CLASSES.filter((c) => c.toLowerCase() === v);
   const catchesHalfSaiyan = v === "saiyan";
   const isUnreachableHalfSaiyan = v === "half-saiyan";
-  const isUnknown = !KNOWN_RACES_LOWER.has(v) && !KNOWN_CLASSES_LOWER.has(v);
-  return { races, classes, catchesHalfSaiyan, isUnreachableHalfSaiyan, isUnknown };
+  const isRandomReward = v === "randrew";
+  const isUnknown = !isRandomReward
+    && !KNOWN_RACES_LOWER.has(v)
+    && !KNOWN_CLASSES_LOWER.has(v);
+  return { races, classes, catchesHalfSaiyan, isUnreachableHalfSaiyan, isRandomReward, isUnknown };
 }
