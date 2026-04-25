@@ -13,6 +13,11 @@ export default defineConfig({
       instances: [{ browser: "chromium" }],
     },
     include: ["src/**/*.test.{ts,tsx}"],
+    typecheck: {
+      enabled: false, // opt-in via the test:types script, since tsc runs slowly under watch
+      include: ["src/**/*.test-d.ts"],
+      tsconfig: "./tsconfig.json",
+    },
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],
