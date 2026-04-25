@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { OBJECTIVE_TYPES, type ObjectiveType, type Objective } from "../types/mission";
 import { useTranslation } from "react-i18next";
 import {
@@ -13,6 +14,8 @@ import { translate, entityDisplayName, itemDisplayName, keysWithPrefix, onLangua
 import { formatNumber } from "../utils/formatNumber";
 import { computePowerLevel, type PLConfig } from "../utils/powerLevel";
 import { Autocomplete } from "./Autocomplete";
+import { IconChevronUp, IconChevronDown, IconTrash } from "./Icons";
+import { ObjectivePresetDialog } from "./PresetDialogs";
 
 /** Fields considered "advanced" - hidden unless showAdvancedFields is true. */
 const ADVANCED_FIELDS: Set<keyof Objective> = new Set([
@@ -31,6 +34,7 @@ interface ObjectiveEditorProps {
 
 export function ObjectiveEditor({ objectives, onChange, translated, showHints = true, showAdvancedFields = true, plConfig }: ObjectiveEditorProps) {
   const { t } = useTranslation();
+  const [showPresets, setShowPresets] = useState(false);
 
   function updateObjective(index: number, raw: string) {
     const updated = [...objectives];
@@ -38,8 +42,8 @@ export function ObjectiveEditor({ objectives, onChange, translated, showHints = 
     onChange(updated);
   }
 
-  function addObjective() {
-    onChange([...objectives, "kill;N;H100;A50"]);
+  function appendObjective(raw: string) {
+    onChange([...objectives, raw]);
   }
 
   function removeObjective(index: number) {
@@ -60,7 +64,10 @@ export function ObjectiveEditor({ objectives, onChange, translated, showHints = 
     <div className="editor-section">
       <div className="editor-section-header">
         <span>{t("objectives.title")}</span>
-        <button className="small" onClick={addObjective}>{t("objectives.add")}</button>
+        <div style={{ display: "flex", gap: 4 }}>
+          <button className="small" onClick={() => setShowPresets(true)}>{t("objectives.presets")}</button>
+          <button className="small" onClick={() => appendObjective("kill;N;H100;A50")}>{t("objectives.add")}</button>
+        </div>
       </div>
       <div className="card-list">
         {objectives.map((raw, i) => (
@@ -80,6 +87,13 @@ export function ObjectiveEditor({ objectives, onChange, translated, showHints = 
           />
         ))}
       </div>
+
+      {showPresets && (
+        <ObjectivePresetDialog
+          onSelect={(raw) => appendObjective(raw)}
+          onClose={() => setShowPresets(false)}
+        />
+      )}
     </div>
   );
 }
@@ -199,13 +213,24 @@ function ObjectiveCard({ index, raw, isFirst, translated, showHints = true, show
               <option key={ot} value={ot}>{TYPE_LABELS[ot]}</option>
             ))}
           </select>
+          {isFirst && (
+            <span className="card-hint" title={t("objectives.actionHint")}>
+              {t("objectives.actionHint")}
+            </span>
+          )}
         </div>
         <div className="card-actions">
           {!isFirst && (
             <>
-              <button className="small" onClick={onMoveUp} title={t("objectives.moveUp")}>^</button>
-              <button className="small" onClick={onMoveDown} title={t("objectives.moveDown")}>v</button>
-              <button className="small danger" onClick={onRemove} title={t("objectives.remove")}>x</button>
+              <button className="small" onClick={onMoveUp} title={t("objectives.moveUp")}>
+                <IconChevronUp size={12} />
+              </button>
+              <button className="small" onClick={onMoveDown} title={t("objectives.moveDown")}>
+                <IconChevronDown size={12} />
+              </button>
+              <button className="small danger" onClick={onRemove} title={t("objectives.remove")}>
+                <IconTrash size={12} />
+              </button>
             </>
           )}
         </div>

@@ -17,11 +17,17 @@ function Wrapper({ initial, onUpdate }: { initial?: Partial<MissionBundle>; onUp
   );
 }
 
+/** Bundle settings collapse by default; expand before asserting on inner fields. */
+async function expand() {
+  await userEvent.setup().click(screen.getByRole("button", { name: /bundle settings/i }));
+}
+
 describe("BundleEditor", () => {
-  it("renders all top-level bundle fields with current values", () => {
+  it("renders all top-level bundle fields with current values", async () => {
     render(
       <Wrapper initial={{ name: "My Pack", version: "2.5", authors: "Alice, Bob", mods: "dbc", desc: "desc" }} />,
     );
+    await expand();
     expect(screen.getByDisplayValue("My Pack")).toBeInTheDocument();
     expect(screen.getByDisplayValue("2.5")).toBeInTheDocument();
     expect(screen.getByDisplayValue("Alice, Bob")).toBeInTheDocument();
@@ -32,6 +38,7 @@ describe("BundleEditor", () => {
   it("propagates name edits", async () => {
     let latest: MissionBundle | undefined;
     render(<Wrapper initial={{ name: "Old" }} onUpdate={(b) => { latest = b; }} />);
+    await expand();
     const input = screen.getByDisplayValue("Old");
     await userEvent.setup().clear(input);
     await userEvent.setup().type(input, "New");
@@ -41,6 +48,7 @@ describe("BundleEditor", () => {
   it("merges settings edits without disturbing top-level fields", async () => {
     let latest: MissionBundle | undefined;
     render(<Wrapper onUpdate={(b) => { latest = b; }} />);
+    await expand();
     const repeat = screen.getByDisplayValue("-1");
     await userEvent.setup().clear(repeat);
     await userEvent.setup().type(repeat, "7");
@@ -52,6 +60,7 @@ describe("BundleEditor", () => {
   it("updates the description textarea", async () => {
     let latest: MissionBundle | undefined;
     render(<Wrapper initial={{ desc: "" }} onUpdate={(b) => { latest = b; }} />);
+    await expand();
     // Description is a <textarea>; rows=2 lets us identify it among textboxes.
     const textarea = document.querySelector("textarea") as HTMLTextAreaElement;
     expect(textarea).not.toBeNull();
@@ -63,6 +72,7 @@ describe("BundleEditor", () => {
     const original = createEmptyBundle();
     const snapshot = JSON.parse(JSON.stringify(original));
     render(<BundleEditor bundle={original} onChange={() => {}} />);
+    await expand();
     const input = screen.getByDisplayValue("New Bundle");
     await userEvent.setup().type(input, "!");
     expect(original).toEqual(snapshot);

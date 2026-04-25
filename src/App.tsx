@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef, lazy, Suspense } from "react";
 import "./App.css";
 import type { MissionBundle, Mission } from "./types/mission";
 import {
@@ -12,6 +12,8 @@ import { validateBundle, type ValidationWarning } from "./utils/validation";
 import { applyTheme } from "./utils/theme";
 import { loadSettings, saveSettings, type EditorSettings } from "./utils/settings";
 import { loadLanguage, onLanguageChange } from "./utils/translations";
+import { computeEditedMissionIds } from "./utils/missionDirty";
+import { readTextFile } from "@tauri-apps/plugin-fs";
 import { useTranslation } from "react-i18next";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { confirm as tauriConfirm } from "@tauri-apps/plugin-dialog";
@@ -20,17 +22,21 @@ import { Sidebar } from "./components/Sidebar";
 import { BundleEditor } from "./components/BundleEditor";
 import { MissionEditor } from "./components/MissionEditor";
 import { ValidationPanel } from "./components/ValidationPanel";
-import { FlowGraph } from "./components/FlowGraph";
-import { ExportPreview } from "./components/ExportPreview";
-import { TemplateDialog } from "./components/TemplateDialog";
-import { SettingsDialog } from "./components/SettingsDialog";
-import { UpdateDialog } from "./components/UpdateDialog";
 import { checkForUpdate, type UpdateInfo } from "./utils/updater";
 import type { Update } from "@tauri-apps/plugin-updater";
 import {
   IconNew, IconOpen, IconImport, IconSave, IconSaveAs, IconPreview,
   IconUndo, IconRedo, IconSettings, IconRecent,
 } from "./components/Icons";
+
+// Heavy / rarely-used surfaces split into separate chunks. The flow graph in
+// particular drags in @xyflow/react which is the largest single dependency, so
+// keeping it out of the initial bundle is the biggest perceived-load win.
+const FlowGraph = lazy(() => import("./components/FlowGraph").then((m) => ({ default: m.FlowGraph })));
+const ExportPreview = lazy(() => import("./components/ExportPreview").then((m) => ({ default: m.ExportPreview })));
+const TemplateDialog = lazy(() => import("./components/TemplateDialog").then((m) => ({ default: m.TemplateDialog })));
+const SettingsDialog = lazy(() => import("./components/SettingsDialog").then((m) => ({ default: m.SettingsDialog })));
+const UpdateDialog = lazy(() => import("./components/UpdateDialog").then((m) => ({ default: m.UpdateDialog })));
 
 interface LoadedBundle {
   bundle: MissionBundle;
@@ -178,18 +184,53 @@ function App() {
     return () => clearInterval(interval);
   }, [settings.autoSaveEnabled, settings.autoSaveInterval]);
 
-  // Recover auto-save on mount
+  // Recover auto-save on mount. For each recovered bundle that still has a
+  // path on disk, compare the auto-saved content to the file: if they match,
+  // treat it as a clean recovery (no edits since the last save); otherwise
+  // mark dirty and use the on-disk file as the baseline so the per-mission
+  // dirty diff flags only the genuinely-changed missions.
   useEffect(() => {
     const saved = loadAutoSaveData();
-    if (saved && saved.bundles.length > 0 && bundles.length === 0) {
-      const recovered = saved.bundles.map((b) => ({
-        bundle: b.bundle,
-        path: b.path,
-        dirty: true,
-        originalJson: undefined,
-      }));
+    if (!saved || saved.bundles.length === 0 || bundles.length !== 0) return;
+
+    let cancelled = false;
+    const indent = settingsRef.current.jsonIndent;
+    (async () => {
+      const recovered: LoadedBundle[] = await Promise.all(
+        saved.bundles.map(async (b) => {
+          if (!b.path) {
+            // No on-disk reference: this was an unsaved bundle. Genuinely dirty.
+            return { bundle: b.bundle, path: b.path, dirty: true, originalJson: undefined };
+          }
+          try {
+            const content = await readTextFile(b.path);
+            const onDisk = JSON.parse(content);
+            const matchesDisk = JSON.stringify(onDisk) === JSON.stringify(b.bundle);
+            return {
+              bundle: b.bundle,
+              path: b.path,
+              dirty: !matchesDisk,
+              // Re-stringify with the user's indent so ExportPreview's diff
+              // view stays formatted; the per-mission dirty check parses it
+              // back, so the format itself doesn't affect correctness.
+              originalJson: JSON.stringify(onDisk, null, indent),
+            };
+          } catch {
+            // File missing or unreadable: keep the recovered work but mark
+            // dirty since we can't verify it against disk.
+            return { bundle: b.bundle, path: b.path, dirty: true, originalJson: undefined };
+          }
+        }),
+      );
+      if (cancelled) return;
       resetBundles(recovered);
-    }
+      // If everything we recovered actually matches disk, the auto-save entry
+      // is stale (e.g. left over from a Save As that didn't clear it). Drop it
+      // so the next launch doesn't repeat this dance.
+      if (recovered.every((b) => !b.dirty)) clearAutoSaveData();
+    })();
+
+    return () => { cancelled = true; };
   }, []);
 
   const current = bundles[selectedBundle];
@@ -232,6 +273,13 @@ function App() {
     next[selectedBundle] = { ...next[selectedBundle], bundle, dirty: true };
     setBundles(next);
   }, [bundles, selectedBundle, selectedMission]);
+
+  const editedMissionIds = useMemo<Set<number>>(
+    () => current
+      ? computeEditedMissionIds(current.bundle, current.originalJson, current.dirty)
+      : new Set<number>(),
+    [current?.bundle, current?.originalJson, current?.dirty],
+  );
 
   const missionDefaults = useMemo(() => ({
     translated: settings.defaultTranslated,
@@ -328,6 +376,7 @@ function App() {
         const next = [...bundles];
         next[selectedBundle] = { ...next[selectedBundle], path, dirty: false, originalJson: json };
         setBundles(next, true);
+        clearAutoSaveData();
         setRecentFiles(getRecentFiles());
         showToast(t("toast.saved", { path: path.split(/[/\\]/).pop() }), "success");
       }
@@ -492,7 +541,11 @@ function App() {
       <div className="toolbar">
         <span className="toolbar-title">
           {t("app.title")}
-          {current?.path && <span className="toolbar-path">{current.path}</span>}
+          {current?.path && (
+            <span className="toolbar-path" title={current.path}>
+              {current.path.split(/[/\\]/).pop()}
+            </span>
+          )}
           {current?.dirty && <span style={{ color: "var(--warning)", marginLeft: 6 }}>*</span>}
         </span>
         <button onClick={handleNew} title="Ctrl+N"><IconNew size={14} />{t("toolbar.new")}</button>
@@ -534,6 +587,7 @@ function App() {
             selectedMission={selectedMission}
             duplicateIds={duplicateIds}
             dirtyBundles={bundles.map((b) => b.dirty)}
+            editedMissionIds={editedMissionIds}
             resolveTranslatedTitles={settings.resolveTranslatedTitles}
             showMissionIds={settings.showMissionIds}
             onSelectBundle={handleSelectBundle}
@@ -561,6 +615,7 @@ function App() {
                         onChange={updateMission}
                         showHints={settings.showTranslationHints}
                         showAdvancedFields={settings.showAdvancedObjectiveFields}
+                        showVariantSimulator={settings.showVariantSimulator}
                         plConfig={settings.showPowerLevelHint
                           ? { conStatInc: settings.plConStatInc, bpModeSquared: settings.plBPModeSquared }
                           : null}
@@ -584,15 +639,17 @@ function App() {
                           />
                         )}
                         {bottomTab === "flow" && (
-                          <FlowGraph
-                            bundle={current.bundle}
-                            selectedMission={selectedMission}
-                            onSelectMission={setSelectedMission}
-                            onUpdateBundle={updateBundle}
-                            onAddMission={handleAddMissionFromGraph}
-                            onDeleteMission={handleDeleteMission}
-                            resolveTranslatedTitles={settings.resolveTranslatedTitles}
-                          />
+                          <Suspense fallback={<div className="editor-empty">{t("empty.noMission")}</div>}>
+                            <FlowGraph
+                              bundle={current.bundle}
+                              selectedMission={selectedMission}
+                              onSelectMission={setSelectedMission}
+                              onUpdateBundle={updateBundle}
+                              onAddMission={handleAddMissionFromGraph}
+                              onDeleteMission={handleDeleteMission}
+                              resolveTranslatedTitles={settings.resolveTranslatedTitles}
+                            />
+                          </Suspense>
                         )}
                       </div>
                     </Panel>
@@ -624,36 +681,40 @@ function App() {
         </Panel>
       </PanelGroup>
 
-      {/* Modals */}
-      {showExport && current && (
-        <ExportPreview
-          bundle={current.bundle}
-          originalJson={current.originalJson}
-          jsonIndent={settings.jsonIndent}
-          onClose={() => setShowExport(false)}
-        />
-      )}
-      {showTemplateDialog && current && (
-        <TemplateDialog
-          nextId={nextId}
-          onSelect={handleAddFromTemplate}
-          onClose={() => setShowTemplateDialog(false)}
-        />
-      )}
-      {showSettings && (
-        <SettingsDialog
-          settings={settings}
-          onChange={updateSettings}
-          onClose={() => setShowSettings(false)}
-        />
-      )}
-      {pendingUpdate && (
-        <UpdateDialog
-          update={pendingUpdate.update}
-          info={pendingUpdate.info}
-          onClose={() => setPendingUpdate(null)}
-        />
-      )}
+      {/* Modals — wrapped in a single Suspense boundary; the fallback is an
+          empty fragment because dialogs already have their own overlays and a
+          flicker of nothing is fine for a one-shot chunk fetch. */}
+      <Suspense fallback={null}>
+        {showExport && current && (
+          <ExportPreview
+            bundle={current.bundle}
+            originalJson={current.originalJson}
+            jsonIndent={settings.jsonIndent}
+            onClose={() => setShowExport(false)}
+          />
+        )}
+        {showTemplateDialog && current && (
+          <TemplateDialog
+            nextId={nextId}
+            onSelect={handleAddFromTemplate}
+            onClose={() => setShowTemplateDialog(false)}
+          />
+        )}
+        {showSettings && (
+          <SettingsDialog
+            settings={settings}
+            onChange={updateSettings}
+            onClose={() => setShowSettings(false)}
+          />
+        )}
+        {pendingUpdate && (
+          <UpdateDialog
+            update={pendingUpdate.update}
+            info={pendingUpdate.info}
+            onClose={() => setPendingUpdate(null)}
+          />
+        )}
+      </Suspense>
       {toast && (
         <div className={`toast toast-${toast.type}`}>
           <span>{toast.text}</span>

@@ -10,4 +10,8 @@ export {
   Settings as IconSettings,
   Clock as IconRecent,
   Trash2 as IconTrash,
+  Copy as IconDuplicate,
+  ChevronUp as IconChevronUp,
+  ChevronDown as IconChevronDown,
+  ChevronRight as IconChevronRight,
 } from "lucide-react";

@@ -4,14 +4,16 @@ import { useTranslation } from "react-i18next";
 import {
   parseReward,
   serializeReward,
+  summarizeReward,
   REWARD_TYPE_LABELS,
   TP_MODE_LABELS,
 } from "../utils/rewards";
+import { IconTrash } from "./Icons";
 import { ALL_ITEMS } from "../utils/registry";
 import { translate, keysWithPrefix, onLanguageChange } from "../utils/translations";
 import { Autocomplete } from "./Autocomplete";
 import { NumberInput } from "./NumberInput";
-import { RewardPresetDialog } from "./TemplateDialog";
+import { RewardPresetDialog } from "./PresetDialogs";
 
 // Cached button name translation keys for autocomplete (invalidated on language change)
 let _buttonNameKeys: string[] | null = null;
@@ -131,14 +133,21 @@ function RewardCard({ index, raw, translated, showHints = true, onChange, onRemo
   // Resolve the button name translation
   const buttonHint = reward.buttonName ? translate(reward.buttonName) : undefined;
 
+  const summary = summarizeReward(reward);
+
   return (
     <div className="card">
       <div className="card-header">
         <div className="card-header-left">
           <span className="card-index">{t("rewards.choice")} #{index + 1}</span>
+          <span className="reward-summary">{summary}</span>
         </div>
         <div className="card-actions">
-          {canRemove && <button className="small danger" onClick={onRemove}>x</button>}
+          {canRemove && (
+            <button className="small danger" onClick={onRemove} title={t("objectives.remove")}>
+              <IconTrash size={12} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -276,7 +285,9 @@ function RewardComponentRow({ component, onChange, onRemove, canRemove }: Reward
       )}
 
       {canRemove && (
-        <button className="small danger" onClick={onRemove} style={{ alignSelf: "center" }}>x</button>
+        <button className="small danger" onClick={onRemove} style={{ alignSelf: "center" }} title={t("objectives.remove")}>
+          <IconTrash size={12} />
+        </button>
       )}
     </div>
   );

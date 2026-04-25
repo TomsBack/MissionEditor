@@ -36,6 +36,9 @@ export interface EditorSettings {
   showPowerLevelHint: boolean;
   plConStatInc: number;
   plBPModeSquared: boolean;
+
+  // Variant editor
+  showVariantSimulator: boolean;
 }
 
 const DEFAULTS: EditorSettings = {
@@ -56,6 +59,7 @@ const DEFAULTS: EditorSettings = {
   showPowerLevelHint: true,
   plConStatInc: 0.5,
   plBPModeSquared: false,
+  showVariantSimulator: false,
 };
 
 export function loadSettings(): EditorSettings {

@@ -233,6 +233,16 @@ export function SettingsDialog({ settings, onChange, onClose }: SettingsDialogPr
                         {t("settings.confirmDelete")}
                       </label>
                     </div>
+                    <div className="settings-row">
+                      <label className="settings-label">
+                        <input
+                          type="checkbox"
+                          checked={settings.showVariantSimulator}
+                          onChange={(e) => update("showVariantSimulator", e.target.checked)}
+                        />
+                        {t("settings.variantSimulator")}
+                      </label>
+                    </div>
                   </div>
 
                   <div className="settings-section">

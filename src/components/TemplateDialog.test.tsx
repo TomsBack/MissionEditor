@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { TemplateDialog, RewardPresetDialog } from "./TemplateDialog";
-import { MISSION_TEMPLATES } from "../utils/templates";
+import { TemplateDialog, RewardPresetDialog, ObjectivePresetDialog } from "./TemplateDialog";
+import { MISSION_TEMPLATES, OBJECTIVE_PRESETS } from "../utils/templates";
 import { parseReward } from "../utils/rewards";
+import { parseObjective } from "../utils/objectives";
 
 describe("TemplateDialog", () => {
   it("renders a card for every registered template", () => {
@@ -77,5 +78,42 @@ describe("RewardPresetDialog", () => {
     expect(rewards).toHaveLength(1);
     expect(parseReward(rewards[0]).components[0].type).toBe("nothing");
     expect(parseReward(rewards[0]).nextMissionId).toBe(9);
+  });
+});
+
+describe("ObjectivePresetDialog", () => {
+  it("renders one card per registered objective preset", () => {
+    render(<ObjectivePresetDialog onSelect={() => {}} onClose={() => {}} />);
+    expect(document.querySelectorAll(".template-card").length).toBe(OBJECTIVE_PRESETS.length);
+  });
+
+  it("emits the chosen preset's raw objective string and closes", async () => {
+    const onSelect = vi.fn();
+    const onClose = vi.fn();
+    render(<ObjectivePresetDialog onSelect={onSelect} onClose={onClose} />);
+
+    // First card is the kill preset.
+    await userEvent.setup().click(document.querySelectorAll(".template-card")[0]);
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onClose).toHaveBeenCalledTimes(1);
+    const raw = onSelect.mock.calls[0][0] as string;
+    expect(parseObjective(raw).type).toBe("kill");
+  });
+
+  it("clicking the overlay closes without selecting", async () => {
+    const onSelect = vi.fn();
+    const onClose = vi.fn();
+    const { container } = render(<ObjectivePresetDialog onSelect={onSelect} onClose={onClose} />);
+    await userEvent.setup().click(container.querySelector(".modal-overlay")!);
+    expect(onClose).toHaveBeenCalled();
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it("every registered preset parses to a valid objective type", () => {
+    for (const p of OBJECTIVE_PRESETS) {
+      const obj = parseObjective(p.raw);
+      expect(obj.type).toBeDefined();
+      expect(obj.type.length).toBeGreaterThan(0);
+    }
   });
 });

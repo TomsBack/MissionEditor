@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { translate } from "../utils/translations";
 import { DragDropProvider } from "@dnd-kit/react";
 import { useSortable } from "@dnd-kit/react/sortable";
+import { IconDuplicate, IconTrash } from "./Icons";
 
 interface SidebarProps {
   bundles: MissionBundle[];
@@ -11,6 +12,8 @@ interface SidebarProps {
   selectedMission: number;
   duplicateIds: Set<number>;
   dirtyBundles: boolean[];
+  /** Mission IDs that have unsaved edits in the current bundle. */
+  editedMissionIds?: Set<number>;
   resolveTranslatedTitles?: boolean;
   showMissionIds?: boolean;
   onSelectBundle: (index: number) => void;
@@ -49,6 +52,7 @@ interface SortableMissionProps {
   index: number;
   isSelected: boolean;
   isDuplicate: boolean;
+  isEdited: boolean;
   resolveTranslatedTitles: boolean;
   showMissionIds: boolean;
   showCopySelect: boolean;
@@ -62,7 +66,7 @@ interface SortableMissionProps {
 }
 
 function SortableMissionItem({
-  mission, index, isSelected, isDuplicate, resolveTranslatedTitles,
+  mission, index, isSelected, isDuplicate, isEdited, resolveTranslatedTitles,
   showMissionIds, showCopySelect, bundles, selectedBundle, fallbackTitle,
   onSelect, onDelete, onDuplicate, onCopy,
 }: SortableMissionProps) {
@@ -83,6 +87,7 @@ function SortableMissionItem({
       )}
       <span className="sidebar-item-text">
         <span className="sidebar-item-name">
+          {isEdited && <span className="dirty-dot" title={t("sidebar.edited")} />}
           {getMissionTitle(mission, fallbackTitle, resolveTranslatedTitles)}
         </span>
         {subtitle && (
@@ -111,14 +116,14 @@ function SortableMissionItem({
         onClick={(e) => { e.stopPropagation(); onDuplicate(); }}
         title={t("sidebar.duplicate")}
       >
-        D
+        <IconDuplicate size={11} />
       </button>
       <button
         className="small danger"
         onClick={(e) => { e.stopPropagation(); onDelete(); }}
         title={t("sidebar.delete")}
       >
-        x
+        <IconTrash size={11} />
       </button>
     </div>
   );
@@ -132,6 +137,7 @@ export function Sidebar({
   selectedMission,
   duplicateIds,
   dirtyBundles,
+  editedMissionIds,
   resolveTranslatedTitles = false,
   showMissionIds = true,
   onSelectBundle,
@@ -153,9 +159,16 @@ export function Sidebar({
     ? missions.map((m, i) => ({ m, i })).filter(({ m }) => {
         const q = search.toLowerCase();
         const title = getMissionTitle(m, "", resolveTranslatedTitles);
+        const subtitle = getMissionSubtitle(m, resolveTranslatedTitles) ?? "";
+        const desc = m.description?.[0] ?? "";
+        const resolvedDesc = resolveTranslatedTitles && m.translated
+          ? (translate(desc) ?? desc)
+          : desc;
         return (
           m.id.toString().includes(q) ||
-          title.toLowerCase().includes(q)
+          title.toLowerCase().includes(q) ||
+          subtitle.toLowerCase().includes(q) ||
+          resolvedDesc.toLowerCase().includes(q)
         );
       })
     : missions.map((m, i) => ({ m, i }));
@@ -194,7 +207,7 @@ export function Sidebar({
                 onClick={(e) => { e.stopPropagation(); onCloseBundle(i); }}
                 title={t("sidebar.closeBundle")}
               >
-                x
+                <IconTrash size={11} />
               </button>
             </div>
           ))}
@@ -236,6 +249,7 @@ export function Sidebar({
                 index={i}
                 isSelected={i === selectedMission}
                 isDuplicate={duplicateIds.has(m.id)}
+                isEdited={editedMissionIds?.has(m.id) ?? false}
                 resolveTranslatedTitles={resolveTranslatedTitles}
                 showMissionIds={showMissionIds}
                 showCopySelect={bundles.length > 1}

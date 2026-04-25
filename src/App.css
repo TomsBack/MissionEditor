@@ -80,6 +80,7 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  cursor: default;
 }
 
 .toolbar-sep {
@@ -384,6 +385,110 @@ body {
   font-weight: 600;
 }
 
+.mission-header-title {
+  font-weight: 400;
+  color: var(--text-secondary);
+  margin-left: 4px;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.checkbox-row input[type="checkbox"] {
+  margin: 0;
+}
+
+.reward-summary {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-style: italic;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+/* #endregion */
+
+/* #region Bundle Section */
+
+.bundle-section {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  background: var(--bg-panel);
+}
+
+.bundle-section-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 4px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.bundle-section-toggle:hover {
+  background: transparent;
+  border-color: transparent;
+}
+
+.bundle-section-title {
+  flex-shrink: 0;
+}
+
+.bundle-section-summary {
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.bundle-subgroup {
+  margin-top: 10px;
+}
+
+.bundle-subgroup-header {
+  margin-top: 14px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-muted);
+}
+
+.bundle-advanced-toggle {
+  align-self: flex-start;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: 2px 0;
+}
+
+.bundle-advanced-toggle:hover:not(:disabled) {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-primary);
+}
+
 /* #endregion */
 
 /* #region Form Controls */
@@ -519,6 +624,17 @@ button.small {
   gap: 4px;
 }
 
+.card-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-left: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
 .reward-component {
   display: flex;
   align-items: start;
@@ -579,6 +695,121 @@ button.small {
 .prop-tab-close:hover {
   opacity: 1;
   color: var(--danger);
+}
+
+.prop-tab-name {
+  white-space: nowrap;
+}
+
+.prop-tab.fallback {
+  border-style: dashed;
+}
+
+.prop-tab.fallback.active {
+  border-style: solid;
+}
+
+.prop-tab-fallback {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  opacity: 0.7;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.prop-tab.sim-match {
+  box-shadow: 0 0 0 2px var(--warning);
+}
+
+.prop-tab-input {
+  background: var(--bg-input);
+  border: none;
+  color: var(--text-primary);
+  font-size: 12px;
+  padding: 1px 4px;
+  width: 12ch;
+  outline: none;
+}
+
+.prop-tab.active .prop-tab-input {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.variant-simulator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  flex-wrap: wrap;
+}
+
+.variant-simulator-label {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-muted);
+}
+
+.variant-simulator select {
+  width: auto;
+  min-width: 110px;
+  padding: 2px 6px;
+  font-size: 11px;
+}
+
+.variant-simulator-result {
+  color: var(--accent);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.variant-coverage {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.variant-rename {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  margin-bottom: 4px;
+}
+
+.variant-rename .field-label {
+  flex-shrink: 0;
+  margin-bottom: 0;
+}
+
+.variant-rename .autocomplete-wrapper {
+  flex: 1;
+  max-width: 360px;
+}
+
+.variant-hint {
+  margin-top: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  border-radius: var(--radius-sm);
+  line-height: 1.4;
+}
+
+.variant-hint-info {
+  background: rgba(74, 158, 255, 0.08);
+  color: var(--text-secondary);
+  border-left: 2px solid var(--accent);
+}
+
+.variant-hint-warn {
+  background: rgba(255, 152, 0, 0.1);
+  color: var(--warning);
+  border-left: 2px solid var(--warning);
 }
 
 /* #endregion */

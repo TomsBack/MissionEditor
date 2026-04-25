@@ -74,10 +74,36 @@ describe("MissionEditor", () => {
     render(<Harness onUpdate={onUpdate} />);
     await userEvent.setup().click(screen.getByRole("button", { name: /\+ variant/i }));
     const last = onUpdate.mock.calls.at(-1)![0] as Mission;
-    expect(last.props[1]).toMatch(/^variant_/);
+    // New variants start with an empty prop name so the user is forced to
+    // choose a real race/class via the inline tab editor; defaults for the
+    // rest of the parallel arrays should still be sane.
+    expect(last.props[1]).toBe("");
     expect(last.align[1]).toBe("neutral");
     expect(last.objectives[1]).toEqual(["start"]);
     expect(last.rewards[1]).toEqual(["nothing;;0"]);
+  });
+
+  it("Duplicate Variant clones the active variant's content", async () => {
+    const onUpdate = vi.fn();
+    const initial: Mission = {
+      ...createEmptyMission(0),
+      props: ["Saiyan"],
+      align: ["good"],
+      title: ["Reach SSJ"],
+      subtitle: [""],
+      description: [""],
+      objectives: [["start", "kill;NSaiyan02;H400"]],
+      rewards: [["nothing;;5"]],
+    };
+    render(<Harness initial={initial} onUpdate={onUpdate} />);
+    await userEvent.setup().click(screen.getByRole("button", { name: /duplicate variant/i }));
+    const last = onUpdate.mock.calls.at(-1)![0] as Mission;
+    expect(last.props).toHaveLength(2);
+    expect(last.props[1]).toMatch(/Saiyan.*\(copy\)/);
+    expect(last.align[1]).toBe("good");
+    expect(last.title[1]).toBe("Reach SSJ");
+    expect(last.objectives[1]).toEqual(["start", "kill;NSaiyan02;H400"]);
+    expect(last.rewards[1]).toEqual(["nothing;;5"]);
   });
 
   it("clicking a variant tab switches the active variant", async () => {
@@ -142,14 +168,19 @@ describe("MissionEditor", () => {
     expect(last.align[0]).toBe("evil");
   });
 
-  it("editing the property/race+class field updates props[]", async () => {
+  it("the variant rename field updates the active variant's prop name", async () => {
     const onUpdate = vi.fn();
+    const user = userEvent.setup();
     render(<Harness onUpdate={onUpdate} />);
-    const propInput = screen.getByDisplayValue("default") as HTMLInputElement;
-    await userEvent.setup().clear(propInput);
-    await userEvent.setup().type(propInput, "saiyan_0");
+
+    // The rename field is the only input that initially shows "default"
+    // (the empty-mission's first variant is named "default").
+    const renameInput = screen.getByDisplayValue("default") as HTMLInputElement;
+    await user.clear(renameInput);
+    await user.type(renameInput, "Saiyan");
+
     const last = onUpdate.mock.calls.at(-1)![0] as Mission;
-    expect(last.props[0]).toBe("saiyan_0");
+    expect(last.props[0]).toBe("Saiyan");
   });
 
   it("editing the description textarea updates description[]", async () => {

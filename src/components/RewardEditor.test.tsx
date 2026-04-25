@@ -125,7 +125,7 @@ describe("RewardEditor", () => {
     render(<Harness initial={["tp!fix!100||align!+10;Btn;1"]} onUpdate={onUpdate} />);
     // Component-row remove buttons live inside .reward-component containers.
     const componentRow = document.querySelectorAll(".reward-component")[1] as HTMLElement;
-    const removeBtn = within(componentRow).getByRole("button", { name: "x" });
+    const removeBtn = within(componentRow).getByRole("button", { name: /remove/i });
     await userEvent.setup().click(removeBtn);
     const last = onUpdate.mock.calls.at(-1)![0] as string[];
     const parsed = parseReward(last[0]);
