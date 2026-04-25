@@ -11,9 +11,13 @@ You need three things on your machine before the suite can run:
    cargo install tauri-driver --locked
    ```
 
-2. **Platform WebDriver** that matches the WebView running the app:
-   - **Windows**: [`msedgedriver`](https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver/) matching your installed WebView2 version. `tauri-driver` shells out to it. Either drop `msedgedriver.exe` on PATH or pass `--native-driver <path>` when launching `tauri-driver` (edit `wdio.conf.ts`'s `spawn` call).
-   - **Linux**: `WebKitWebDriver` (ships with `webkit2gtk`).
+2. **Platform WebDriver** matching the WebView the app uses:
+   - **Windows**: a `msedgedriver` whose version matches the installed WebView2 runtime. From `webdriver/`:
+     ```powershell
+     pnpm setup:driver
+     ```
+     This runs `setup-driver.ps1`, which detects your WebView2 version, downloads the matching driver, and drops it in `webdriver/.bin/` (gitignored). `wdio.conf.ts` then passes `--native-driver` to `tauri-driver` automatically. Re-run this if WebView2 auto-updates and the driver starts throwing `session not created`.
+   - **Linux**: `WebKitWebDriver` (ships with `webkit2gtk`); needs to be on PATH.
    - **macOS**: not officially supported by `tauri-driver` yet.
 
 3. **Built Tauri binary**:
@@ -27,10 +31,12 @@ You need three things on your machine before the suite can run:
 From this directory:
 
 ```bash
-pnpm install
+pnpm install --ignore-workspace
+# or use the wrapper script:
+pnpm install:deps
 ```
 
-Kept separate from the main `package.json` so the WDIO + Mocha + chai dependency tree doesn't bleed into the app build.
+`--ignore-workspace` is necessary because the repo root has a `pnpm-workspace.yaml`; without it pnpm tries to resolve `webdriver/` against the workspace and skips the install. The harness is intentionally kept off the workspace so the WDIO + Mocha + chai dependency tree doesn't bleed into the app build.
 
 ## Run
 

@@ -24,6 +24,16 @@ if (!existsSync(APP_PATH)) {
   process.exit(1);
 }
 
+// Local msedgedriver kept in webdriver/.bin/ (downloaded once, version-matched
+// to the installed WebView2). Falls back to whatever's on PATH if the local
+// copy isn't present, so contributors who manage their own driver still work.
+const LOCAL_DRIVER = resolve(
+  __dirname,
+  ".bin",
+  process.platform === "win32" ? "msedgedriver.exe" : "msedgedriver",
+);
+const driverArgs = existsSync(LOCAL_DRIVER) ? ["--native-driver", LOCAL_DRIVER] : [];
+
 let tauriDriver: ChildProcess | undefined;
 
 export const config: WebdriverIO.Config = {
@@ -53,7 +63,7 @@ export const config: WebdriverIO.Config = {
   // tauri-driver listens on 4444 by default.
   hostname: "127.0.0.1",
   port: 4444,
-  logLevel: "info",
+  logLevel: "warn",
   bail: 0,
   baseUrl: "",
   waitforTimeout: 10_000,
@@ -64,7 +74,7 @@ export const config: WebdriverIO.Config = {
   // wired through so its logs land in the test output if something goes
   // wrong (binary not found, port already bound, msedgedriver mismatch).
   beforeSession() {
-    tauriDriver = spawn("tauri-driver", [], {
+    tauriDriver = spawn("tauri-driver", driverArgs, {
       stdio: [null, process.stdout, process.stderr],
     });
     tauriDriver.on("error", (err) => {

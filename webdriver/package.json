@@ -5,8 +5,10 @@
   "description": "End-to-end tests that drive the real Tauri binary via tauri-driver and WebdriverIO.",
   "type": "module",
   "scripts": {
+    "install:deps": "pnpm install --ignore-workspace",
     "test": "wdio run wdio.conf.ts",
-    "test:smoke": "wdio run wdio.conf.ts --spec test/specs/smoke.e2e.ts"
+    "test:smoke": "wdio run wdio.conf.ts --spec test/specs/smoke.e2e.ts",
+    "setup:driver": "pwsh -File setup-driver.ps1"
   },
   "devDependencies": {
     "@types/chai": "^5.2.2",

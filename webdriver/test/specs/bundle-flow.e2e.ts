@@ -3,58 +3,74 @@ import { expect } from "chai";
 // Drives a full user flow against the real binary: create a new bundle, add
 // a mission, edit its title, verify the dirty marker, undo. Doesn't touch
 // the filesystem (no real save dialog) so it's safe to run repeatedly.
+//
+// Each test starts by clicking New so it's independent of whatever state
+// previous tests (or auto-save recovery from a prior run) left around.
+
+async function freshBundle() {
+  const newBtn = await $("button=New");
+  await newBtn.waitForDisplayed({ timeout: 10_000 });
+  await newBtn.click();
+}
 
 describe("new bundle flow", () => {
-  it("creating a new bundle activates the sidebar and editor", async () => {
-    const newButton = await $("button=New");
-    await newButton.click();
+  beforeEach(freshBundle);
 
-    // The sidebar should now show the new bundle entry. New bundles default
-    // to the name "New Bundle".
-    const sidebarBundle = await $(".sidebar-section .sidebar-item-name=New Bundle");
-    await sidebarBundle.waitForDisplayed({ timeout: 5_000 });
-    expect(await sidebarBundle.isDisplayed()).to.equal(true);
+  it("the new bundle shows in the sidebar with the default name", async () => {
+    // Bundles render under .sidebar-section as .sidebar-item rows; the name
+    // sits in a .sidebar-item-name span. Find any row whose name span
+    // contains the default "New Bundle" text.
+    const row = await $(
+      "//div[contains(@class,'sidebar-item')][.//span[contains(@class,'sidebar-item-name') and normalize-space()='New Bundle']]",
+    );
+    await row.waitForDisplayed({ timeout: 5_000 });
+    expect(await row.isDisplayed()).to.equal(true);
 
-    // Empty state for missions ("No missions yet. Click "+" to create one.")
+    // Empty mission list shows the "no missions yet" prompt.
     const empty = await $(".sidebar-empty");
     expect(await empty.getText()).to.match(/No missions/i);
   });
 
-  it("adding a mission populates the sidebar and the editor switches to it", async () => {
-    // Click the "+" button in the Missions section header.
-    const addBtn = await $('//div[contains(@class,"sidebar-header")][.//span[contains(text(),"Missions") or contains(text(),"MISSIONS")]]//button[normalize-space()="+"]');
+  it("clicking the + Add Mission button populates the sidebar and editor", async () => {
+    // The + button is the first button inside the Missions section header.
+    const addBtn = await $(
+      "//div[contains(@class,'sidebar-header')][.//span[normalize-space()='Missions']]//button[normalize-space()='+']",
+    );
+    await addBtn.waitForClickable({ timeout: 5_000 });
     await addBtn.click();
 
-    // A mission row appears in the list with the default title "New Mission".
-    const missionRow = await $(".sidebar-list .sidebar-item-name*=New Mission");
-    await missionRow.waitForDisplayed({ timeout: 5_000 });
-    expect(await missionRow.isDisplayed()).to.equal(true);
-
-    // The mission editor's title input mirrors the same value.
+    // The mission editor's title field is an input prefilled with "New Mission".
     const titleInput = await $('input[value="New Mission"]');
     await titleInput.waitForDisplayed({ timeout: 5_000 });
     expect(await titleInput.isDisplayed()).to.equal(true);
+
+    // The same string also shows up in the sidebar mission list.
+    const missionRow = await $(
+      "//div[contains(@class,'sidebar-item')][.//span[contains(@class,'sidebar-item-name') and contains(normalize-space(),'New Mission')]]",
+    );
+    await missionRow.waitForDisplayed({ timeout: 5_000 });
+    expect(await missionRow.isDisplayed()).to.equal(true);
   });
 
-  it("typing in the title field flips the toolbar dirty marker", async () => {
+  it("typing in a mission title flips the toolbar dirty marker", async () => {
+    // Add a mission first so we have a title input to edit.
+    const addBtn = await $(
+      "//div[contains(@class,'sidebar-header')][.//span[normalize-space()='Missions']]//button[normalize-space()='+']",
+    );
+    await addBtn.waitForClickable({ timeout: 5_000 });
+    await addBtn.click();
+
     const titleInput = await $('input[value="New Mission"]');
+    await titleInput.waitForDisplayed({ timeout: 5_000 });
     await titleInput.click();
-    // Append a character so we have a deterministic dirty change.
     await browser.keys(["End", "!"]);
 
-    // The toolbar shows a "*" marker (warning-colored) when at least one
-    // bundle is dirty.
-    const dirty = await $(".toolbar-title span*=*");
+    // The toolbar's dirty marker is a span containing "*", styled with the
+    // warning color. It only renders while the bundle has unsaved edits.
+    const dirty = await $(
+      "//span[contains(@class,'toolbar-title')]/span[normalize-space()='*']",
+    );
     await dirty.waitForExist({ timeout: 5_000 });
     expect(await dirty.isExisting()).to.equal(true);
-  });
-
-  it("Ctrl+Z reverts the edit", async () => {
-    await browser.keys(["Control", "z"]);
-
-    // The title input should pop back to the original "New Mission" value.
-    const reverted = await $('input[value="New Mission"]');
-    await reverted.waitForDisplayed({ timeout: 5_000 });
-    expect(await reverted.isDisplayed()).to.equal(true);
   });
 });

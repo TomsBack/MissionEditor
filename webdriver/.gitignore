@@ -3,3 +3,5 @@ node_modules/
 logs/
 allure-results/
 allure-report/
+# Locally-downloaded msedgedriver (version-matched to the user's WebView2)
+.bin/
