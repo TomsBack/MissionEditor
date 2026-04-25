@@ -157,7 +157,12 @@ function App() {
         await getCurrentWindow().destroy();
       }
     });
-    return () => { unlisten.then((fn) => fn()); };
+    return () => {
+      // Swallow unlisten errors. The window is going away regardless, and
+      // the Tauri event plugin can throw on unmount (notably in tests where
+      // the runtime isn't fully initialized).
+      unlisten.then((fn) => fn()).catch(() => {});
+    };
   }, []);
 
   function updateSettings(updated: EditorSettings) {
