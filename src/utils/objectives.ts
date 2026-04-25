@@ -1,4 +1,4 @@
-import type { Objective, ObjectiveType } from "../types/mission";
+import { BUTTON_TYPES, type Objective, type ObjectiveType } from "../types/mission";
 
 const KEY_MAP: Record<string, keyof Objective> = {
   N: "name",
@@ -53,8 +53,7 @@ export function parseObjective(raw: string): Objective {
 
 /** Serialize an Objective back into the raw string format. */
 export function serializeObjective(obj: Objective): string {
-  // Button-only types have no fields
-  if (["next", "start", "skip", "restart"].includes(obj.type)) {
+  if (BUTTON_TYPES.includes(obj.type)) {
     return obj.type;
   }
 

@@ -1,4 +1,4 @@
-import type { MissionBundle } from "../types/mission";
+import { ACTION_TYPES, type MissionBundle, type ObjectiveType } from "../types/mission";
 import { parseObjective, FIELDS_BY_TYPE } from "./objectives";
 import { parseReward } from "./rewards";
 
@@ -124,8 +124,7 @@ function validateBundleInner(bundle: MissionBundle): ValidationWarning[] {
       // First objective should be an action type
       if (objectives.length > 0) {
         const firstType = objectives[0]?.split(";")[0];
-        const actionTypes = ["next", "start", "skip", "restart"];
-        if (firstType && !actionTypes.includes(firstType)) {
+        if (firstType && !ACTION_TYPES.includes(firstType as ObjectiveType)) {
           warnings.push({
             level: "warning",
             missionIndex: mi,
